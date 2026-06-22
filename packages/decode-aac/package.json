@@ -20,6 +20,8 @@
   },
   "files": [
     "decode-aac.js",
+    "alac.js",
+    "meta.js",
     "decode-aac.d.ts",
     "src/aac.wasm.cjs",
     "LICENSE"

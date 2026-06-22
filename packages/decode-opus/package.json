@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-opus",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Decode Ogg Opus audio via libopus WASM — self-contained bundle",
   "type": "module",
   "main": "decode-opus.js",
@@ -12,6 +12,7 @@
   },
   "files": [
     "decode-opus.js",
+    "meta.js",
     "decode-opus.d.ts",
     "LICENSE"
   ],
