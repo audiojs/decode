@@ -126,6 +126,18 @@ t('buffer input', async () => {
 	is(near(dur(r), 12.27), true)
 })
 
+t('blob input', async () => {
+	if (typeof Blob === 'undefined') return skip('no Blob')
+	let r = await decode(new Blob([wav]))
+	is(near(dur(r), 12.27), true)
+})
+
+t('response input', async () => {
+	if (typeof Response === 'undefined') return skip('no Response')
+	let r = await decode(new Response(wav))
+	is(near(dur(r), 12.27), true)
+})
+
 // -- streaming via decoders --
 
 t('stream mp3', async () => {

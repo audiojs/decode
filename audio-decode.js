@@ -26,8 +26,10 @@ export default function decode(src, format) {
 }
 
 async function decodeWhole(src) {
+	// Blob / File / Response — anything that materializes to an ArrayBuffer
+	if (src && typeof src.arrayBuffer === 'function') src = await src.arrayBuffer()
 	if (!src || typeof src === 'string' || !(src.buffer || src.byteLength || src.length))
-		throw TypeError('Expected ArrayBuffer or Uint8Array')
+		throw TypeError('Expected ArrayBuffer, Uint8Array, Buffer, Blob, File, or Response')
 	let buf = new Uint8Array(src)
 
 	let type = getType(buf)

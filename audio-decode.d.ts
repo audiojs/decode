@@ -19,8 +19,8 @@ interface FormatDecoder {
   (): Promise<StreamDecoder>;
 }
 
-/** Whole-file decode: auto-detects format. */
-declare function decode(buf: ArrayBuffer | Uint8Array): Promise<AudioData>;
+/** Whole-file decode: auto-detects format. Accepts raw bytes or any source that materializes to bytes (Blob/File/Response). */
+declare function decode(buf: ArrayBuffer | Uint8Array | Blob | Response): Promise<AudioData>;
 /** Chunked decode from stream or async iterable. */
 declare function decode(
   source: ReadableStream<Uint8Array> | AsyncIterable<Uint8Array>,
