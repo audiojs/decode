@@ -258,6 +258,22 @@ for (let name of ['alaw', 'mulaw']) {
 	ok(corr(r.channelData[0], ideal) > 0.97, `${name}: matches 440Hz sine (sign + scale)`)
 }
 
+// ===== ADPCM (IMA / MS), real ffmpeg fixtures, bit-exact =====
+
+for (let name of ['ima_mono', 'ms_mono', 'ima_stereo', 'ms_stereo']) {
+	let buf = new Uint8Array(readFileSync(new URL(`./fixtures/${name}.wav`, import.meta.url)))
+	let r = await decode(buf)
+	let nCh = name.includes('stereo') ? 2 : 1
+	ok(r.sampleRate === 22050, `${name}: sampleRate 22050`)
+	ok(r.channelData.length === nCh, `${name}: ${nCh}ch`)
+	ok(r.channelData[0].length > 10000, `${name}: decoded samples`)
+	// ch0 is a 440Hz sine; for stereo ch1 is 660Hz — validates per-channel nibble mapping.
+	// window inside the real audio (ADPCM pads the final block past the 11025-sample source)
+	let win = 11000
+	ok(corr(r.channelData[0].subarray(0, win), sine(win, 440, 22050)) > 0.99, `${name}: ch0 ≈ 440Hz`)
+	if (nCh === 2) ok(corr(r.channelData[1].subarray(0, win), sine(win, 660, 22050)) > 0.99, `${name}: ch1 ≈ 660Hz`)
+}
+
 // ===== error handling =====
 
 {
@@ -268,10 +284,10 @@ for (let name of ['alaw', 'mulaw']) {
 
 {
 	let threw = false
-	// WAV with unsupported format (ADPCM = 0x0002)
+	// WAV with a genuinely unsupported format tag (0x0099)
 	let buf = buildWav({ bitDepth: 16, samples: [0] })
 	let v = new DataView(buf.buffer)
-	v.setUint16(20, 2, true) // overwrite format id to ADPCM
+	v.setUint16(20, 0x99, true)
 	try { await decode(buf) } catch { threw = true }
 	ok(threw, 'error: rejects unsupported format')
 }
