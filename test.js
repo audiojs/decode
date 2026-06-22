@@ -76,6 +76,19 @@ t('m4a', async () => {
 	is(rms(r.channelData[0]) > 0.05, true, 'has audio content')
 })
 
+t('alac (Apple Lossless) m4a', async () => {
+	if (!isNode) return skip('aac wasm is cjs')
+	// auto-detected as m4a, routed to the pure-JS ALAC decoder
+	let mono = await readFile(new URL('./packages/decode-aac/fixtures/alac_mono.m4a', import.meta.url))
+	let r = await decode(mono)
+	is(r.channelData.length, 1, 'mono')
+	is(r.sampleRate, 44100)
+	is(r.channelData[0].length, 22050, 'sample count')
+	let r24 = await decode(await readFile(new URL('./packages/decode-aac/fixtures/alac24_stereo.m4a', import.meta.url)))
+	is(r24.channelData.length, 2, '24-bit stereo')
+	is(r24.sampleRate, 44100)
+})
+
 t('m4a iPhone voice memo', async () => {
 	if (!isNode) return skip('aac wasm is cjs')
 	let hk = await readFile(new URL('./fixtures/hk.m4a', import.meta.url))

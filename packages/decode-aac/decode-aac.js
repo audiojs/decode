@@ -1,9 +1,12 @@
 /**
  * AAC decoder — FAAD2 compiled to WASM
- * Decodes M4A (MP4/AAC) and raw ADTS streams
+ * Decodes M4A (MP4/AAC) and raw ADTS streams. M4A files carrying ALAC
+ * (Apple Lossless) are decoded by the pure-JS ALAC decoder instead.
  *
  * let { channelData, sampleRate } = await decode(m4abuf)
  */
+
+import { createALAC } from './alac.js'
 
 let _modP
 
@@ -66,6 +69,7 @@ class AACDecoder {
 		this._m4a = null      // M4A streaming iterator: { sizes, stco, stsc, idx, ci, sInC, spc, nextOff }
 		this._accum = null    // Uint8Array[] — M4A header accumulator
 		this._accumLen = 0
+		this._alac = null     // ALAC decoder when the M4A carries Apple Lossless
 	}
 
 	decode(data) {
@@ -104,7 +108,7 @@ class AACDecoder {
 			this._cap = 0
 		}
 		this._accum = null; this._accumLen = 0
-		this._m4a = null; this._left = null
+		this._m4a = null; this._left = null; this._alac = null
 		this._fileOff = 0; this._skip = 0
 	}
 
@@ -117,29 +121,37 @@ class AACDecoder {
 
 	_tryM4AInit() {
 		let buf = this._catAccum()
-		let asc = null, stsz = null, stco = null, stsc = null
+		let asc = null, alacCookie = null, stsz = null, stco = null, stsc = null
 
 		parseBoxes(buf, 0, buf.length, (type, data) => {
 			if (type === 'esds') asc = parseEsds(data)
+			else if (type === 'alac') alacCookie = data // ALAC magic cookie: version/flags(4) + ALACSpecificConfig(24)
 			else if (type === 'stsz') stsz = parseStsz(data)
 			else if (type === 'stco') stco = parseStco(data)
 			else if (type === 'co64') stco = parseCo64(data)
 			else if (type === 'stsc') stsc = parseStsc(data)
 		})
 
-		if (!asc || !stsz || !stco?.length) return EMPTY // moov/tables not ready
+		if ((!asc && !alacCookie) || !stsz || !stco?.length) return EMPTY // moov/tables not ready
 
-		// Init WASM decoder with ASC
-		let m = this.m, h = m._aac_create()
-		let srP = m._aac_sr_ptr(), chP = m._aac_ch_ptr()
-		let ptr = this._alloc(asc.length)
-		m.HEAPU8.set(asc, ptr)
-		let err = m._aac_init2(h, ptr, asc.length, srP, chP)
-		if (err < 0) { m._aac_close(h); throw Error('M4A init failed (code ' + err + ')') }
-		this.sr = m.getValue(srP, 'i32')
-		this.ch = m.getValue(chP, 'i8')
-		if (!this.ch) { m._aac_close(h); throw Error('M4A init: no channels in ASC') }
-		this.h = h
+		if (alacCookie) {
+			// ALAC (Apple Lossless) — pure JS, no FAAD2
+			this._alac = createALAC(alacCookie.subarray(4))
+			this.sr = this._alac.config.sampleRate
+			this.ch = this._alac.config.numChannels
+		} else {
+			// Init WASM decoder with ASC
+			let m = this.m, h = m._aac_create()
+			let srP = m._aac_sr_ptr(), chP = m._aac_ch_ptr()
+			let ptr = this._alloc(asc.length)
+			m.HEAPU8.set(asc, ptr)
+			let err = m._aac_init2(h, ptr, asc.length, srP, chP)
+			if (err < 0) { m._aac_close(h); throw Error('M4A init failed (code ' + err + ')') }
+			this.sr = m.getValue(srP, 'i32')
+			this.ch = m.getValue(chP, 'i8')
+			if (!this.ch) { m._aac_close(h); throw Error('M4A init: no channels in ASC') }
+			this.h = h
+		}
 
 		// Streaming: walk sample tables by absolute file offset so chunk boundaries are irrelevant.
 		this._accum = null; this._accumLen = 0
@@ -243,6 +255,7 @@ class AACDecoder {
 	}
 
 	_feedFrames(frames) {
+		if (this._alac) return this._feedALAC(frames)
 		let m = this.m, h = this.h
 		let chunks = [], totalPerCh = 0, channels = this.ch, errors = 0
 
@@ -276,6 +289,24 @@ class AACDecoder {
 		}
 
 		return { channelData, sampleRate: this.sr, errors }
+	}
+
+	_feedALAC(frames) {
+		let channels = this.ch, parts = [], total = 0
+		for (let frame of frames) {
+			let r = this._alac.decodeFrame(frame)
+			parts.push(r.channelData)
+			total += r.numSamples
+		}
+		if (!total) return EMPTY
+		let channelData = Array.from({ length: channels }, () => new Float32Array(total))
+		let pos = 0
+		for (let cd of parts) {
+			let n = cd[0].length
+			for (let c = 0; c < channels; c++) channelData[c].set(cd[c], pos)
+			pos += n
+		}
+		return { channelData, sampleRate: this.sr }
 	}
 }
 
@@ -322,7 +353,8 @@ function parseSampleDesc(buf, off, len, cb) {
 	for (let i = 0; i < entries && pos < off + len; i++) {
 		let eSize = r32(buf, pos)
 		let eType = String.fromCharCode(buf[pos + 4], buf[pos + 5], buf[pos + 6], buf[pos + 7])
-		if (eType === 'mp4a' && eSize > 36) parseBoxes(buf, pos + 36, pos + eSize, cb)
+		// recurse into the audio sample entry so its child boxes (esds for AAC, alac cookie for ALAC) surface
+		if ((eType === 'mp4a' || eType === 'alac') && eSize > 36) parseBoxes(buf, pos + 36, pos + eSize, cb)
 		pos += eSize
 	}
 }

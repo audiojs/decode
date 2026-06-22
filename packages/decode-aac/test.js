@@ -259,6 +259,25 @@ console.log('performance')
 	console.log('  ' + ms.toFixed(1) + 'ms/decode (249KB, 12.3s audio)')
 }
 
+// ===== ALAC (Apple Lossless) — afconvert fixtures, 16 + 24 bit =====
+console.log('ALAC')
+{
+	let sine = (n, f, sr = 44100) => Array.from({ length: n }, (_, i) => Math.sin(2 * Math.PI * f * i / sr))
+	let corr = (a, b) => {
+		let n = Math.min(a.length, b.length), sa = 0, sb = 0, sab = 0
+		for (let i = 0; i < n; i++) { sa += a[i] * a[i]; sb += b[i] * b[i]; sab += a[i] * b[i] }
+		return sab / Math.sqrt(sa * sb)
+	}
+	for (let [name, nCh] of [['alac_mono', 1], ['alac_stereo', 2], ['alac24_mono', 1], ['alac24_stereo', 2]]) {
+		let r = await decode(readFileSync(new URL('./fixtures/' + name + '.m4a', import.meta.url)))
+		ok(r.sampleRate === 44100, name + ': sampleRate 44100')
+		ok(r.channelData.length === nCh, name + ': ' + nCh + 'ch')
+		ok(r.channelData[0].length === 22050, name + ': sample count')
+		ok(corr(r.channelData[0], sine(r.channelData[0].length, 440)) > 0.99, name + ': ch0 ≈ 440Hz')
+		if (nCh === 2) ok(corr(r.channelData[1], sine(r.channelData[1].length, 660)) > 0.99, name + ': ch1 ≈ 660Hz')
+	}
+}
+
 // ===== metadata (iTunes ilst tags) =====
 console.log('M4A metadata')
 {
