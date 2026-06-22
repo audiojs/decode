@@ -7,6 +7,10 @@
 
 const EMPTY = Object.freeze({ channelData: [], sampleRate: 0 })
 
+// IMA/QuickTime ADPCM tables
+const IMA_STEP = new Int16Array([7,8,9,10,11,12,13,14,16,17,19,21,23,25,28,31,34,37,41,45,50,55,60,66,73,80,88,97,107,118,130,143,157,173,190,209,230,253,279,307,337,371,408,449,494,544,598,658,724,796,876,963,1060,1166,1282,1411,1552,1707,1878,2066,2272,2499,2749,3024,3327,3660,4026,4428,4871,5358,5894,6484,7132,7845,8630,9493,10442,11487,12635,13899,15289,16818,18500,20350,22385,24623,27086,29794,32767])
+const IMA_IDX = new Int8Array([-1,-1,-1,-1,2,4,6,8,-1,-1,-1,-1,2,4,6,8])
+
 /**
  * Whole-file decode
  * @param {Uint8Array|ArrayBuffer} src
@@ -89,6 +93,7 @@ function scanCafHdr(buf) {
 			let bytesPerSample = bits >> 3
 			let frameBytes
 			if (formatID === 'alaw' || formatID === 'ulaw') frameBytes = ch
+			else if (formatID === 'ima4') frameBytes = desc.bytesPerPacket || 34 * ch // packet = 34 bytes/channel
 			else frameBytes = ch * bytesPerSample
 			if (!frameBytes) return null
 			return { ...desc, dataStart, frameBytes, dataSize }
@@ -108,8 +113,51 @@ function decodeCafRaw(raw, hdr) {
 	if (formatID === 'lpcm') samples = decodeLPCM(raw, formatFlags, bits, ch)
 	else if (formatID === 'alaw') samples = decodeAlaw(raw, ch)
 	else if (formatID === 'ulaw') samples = decodeUlaw(raw, ch)
+	else if (formatID === 'ima4') samples = decodeIma4(raw, hdr)
 	else throw Error('CAF: unsupported format ' + formatID)
 	return { channelData: samples, sampleRate }
+}
+
+// QuickTime IMA4 ADPCM — 34-byte packets per channel → 64 frames each.
+// The predictor runs continuously across the whole stream; each packet's 2-byte
+// preamble only snapshots the high 9 bits, so resetting per packet would lose up
+// to 127 LSB. State (predictor + step index) is carried on hdr across chunks.
+function decodeIma4(raw, hdr) {
+	let nCh = hdr.channelsPerFrame, fpp = hdr.framesPerPacket || 64
+	let pktBytes = 34 * nCh, nPk = Math.floor(raw.length / pktBytes)
+	if (!nPk) return []
+	let st = (hdr.ima ||= { pred: new Int32Array(nCh), step: new Int32Array(nCh), started: false })
+	let init = !st.started
+	let ch = Array.from({ length: nCh }, () => new Float32Array(nPk * fpp))
+	for (let pk = 0; pk < nPk; pk++) {
+		for (let c = 0; c < nCh; c++) {
+			let bp = pk * pktBytes + c * 34
+			if (init && pk === 0) {
+				let pre = (raw[bp] << 8) | raw[bp + 1]
+				let p = pre & 0xFF80; if (p > 32767) p -= 65536
+				st.pred[c] = p
+				st.step[c] = Math.min(pre & 0x7F, 88)
+			}
+			let pred = st.pred[c], ix = st.step[c], out = ch[c], base = pk * fpp
+			for (let i = 0; i < 32; i++) {
+				let byte = raw[bp + 2 + i]
+				for (let h = 0; h < 2; h++) {
+					let nib = h === 0 ? byte & 0x0F : (byte >> 4) & 0x0F
+					let step = IMA_STEP[ix], diff = step >> 3
+					if (nib & 1) diff += step >> 2
+					if (nib & 2) diff += step >> 1
+					if (nib & 4) diff += step
+					pred += (nib & 8) ? -diff : diff
+					if (pred > 32767) pred = 32767; else if (pred < -32768) pred = -32768
+					ix += IMA_IDX[nib]; if (ix < 0) ix = 0; else if (ix > 88) ix = 88
+					out[base + i * 2 + h] = pred / 32768
+				}
+			}
+			st.pred[c] = pred; st.step[c] = ix
+		}
+	}
+	st.started = true
+	return ch
 }
 
 function decodeLPCM(data, flags, bits, ch) {

@@ -413,15 +413,11 @@ console.log('edge cases')
 	}
 	d.free()
 
-	// truncated CAF (header only)
+	// truncated CAF (valid magic, header only) — streaming decoder buffers, awaiting more
 	d = await decoder()
 	let truncated = new Uint8Array([0x63, 0x61, 0x66, 0x66, 0, 1, 0, 0])
-	try {
-		r = d.decode(truncated)
-		ok(false, 'truncated should throw')
-	} catch {
-		ok(true, 'truncated -> threw')
-	}
+	r = d.decode(truncated)
+	ok(r.channelData.length === 0, 'truncated header -> EMPTY (buffered)')
 	d.free()
 
 	// too short
@@ -561,6 +557,36 @@ console.log('performance (real file)')
 	let ms = (performance.now() - t0) / N
 	ok(ms < 100, 'real file decode < 100ms (' + ms.toFixed(1) + 'ms)')
 	console.log('  ' + ms.toFixed(1) + 'ms/decode (1MB, 12.3s audio)')
+}
+
+// ---- IMA4 ADPCM (Apple afconvert fixtures, 440/660Hz sines) ----
+console.log('IMA4 ADPCM')
+{
+	let sine = (n, f, sr = 44100) => Array.from({ length: n }, (_, i) => Math.sin(2 * Math.PI * f * i / sr))
+	let corr = (a, b) => {
+		let n = Math.min(a.length, b.length), sa = 0, sb = 0, sab = 0
+		for (let i = 0; i < n; i++) { sa += a[i] * a[i]; sb += b[i] * b[i]; sab += a[i] * b[i] }
+		return sab / Math.sqrt(sa * sb)
+	}
+	for (let name of ['ima4_mono', 'ima4_stereo']) {
+		let buf = new Uint8Array(readFileSync(new URL('./fixtures/' + name + '.caf', import.meta.url)))
+		let nCh = name.includes('stereo') ? 2 : 1
+		let r = await decode(buf)
+		let win = 20000 // inside the 22050-sample source (last packet is padded)
+		ok(r.sampleRate === 44100, name + ': sampleRate 44100')
+		ok(r.channelData.length === nCh, name + ': ' + nCh + 'ch')
+		ok(corr(r.channelData[0].subarray(0, win), sine(win, 440)) > 0.99, name + ': ch0 ≈ 440Hz')
+		if (nCh === 2) ok(corr(r.channelData[1].subarray(0, win), sine(win, 660)) > 0.99, name + ': ch1 ≈ 660Hz')
+
+		// streaming with tiny chunks must match whole-file (cross-packet predictor carry)
+		let dec = await decoder(), parts = [], total = 0
+		for (let o = 0; o < buf.length; o += 100) { let p = dec.decode(buf.subarray(o, o + 100)); if (p.channelData.length) { parts.push(p); total += p.channelData[0].length } }
+		dec.free()
+		let merged = new Float32Array(total), off = 0
+		for (let p of parts) { merged.set(p.channelData[0], off); off += p.channelData[0].length }
+		let exact = merged.every((x, i) => x === r.channelData[0][i])
+		ok(exact, name + ': 100-byte chunked stream == whole-file')
+	}
 }
 
 console.log(`\n${pass + fail} tests, ${pass} passed, ${fail} failed`)
