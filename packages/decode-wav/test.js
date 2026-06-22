@@ -1,4 +1,5 @@
 import decode, { decoder } from './decode-wav.js'
+import { readFileSync } from 'node:fs'
 
 let pass = 0, fail = 0
 function ok(cond, msg) {
@@ -202,6 +203,59 @@ let signal = sine(1000)
 	let threw = false
 	try { dec.decode(wav) } catch { threw = true }
 	ok(threw, 'stream: throws after free')
+}
+
+// ===== WAVE_FORMAT_EXTENSIBLE (0xFFFE) =====
+
+function buildExtensibleWav({ sr = 44100, ch = 1, bitDepth = 16, subFormat = 1, samples }) {
+	let byteDepth = bitDepth / 8, dataSize = samples.length * byteDepth, fmtSize = 40
+	let buf = new ArrayBuffer(12 + 8 + fmtSize + 8 + dataSize)
+	let v = new DataView(buf), p = 0
+	let s = (str) => { for (let i = 0; i < str.length; i++) v.setUint8(p++, str.charCodeAt(i)) }
+	let u16 = (x) => { v.setUint16(p, x, true); p += 2 }
+	let u32 = (x) => { v.setUint32(p, x, true); p += 4 }
+	s('RIFF'); u32(4 + 8 + fmtSize + 8 + dataSize); s('WAVE')
+	s('fmt '); u32(fmtSize)
+	u16(0xFFFE); u16(ch); u32(sr); u32(sr * ch * byteDepth); u16(ch * byteDepth); u16(bitDepth)
+	u16(22); u16(bitDepth); u32(ch === 1 ? 0x4 : 0x3) // cbSize, validBits, channelMask
+	// SubFormat GUID: first 2 bytes = format tag, then standard KSDATAFORMAT suffix
+	for (let byte of [subFormat & 0xFF, subFormat >> 8, 0, 0, 0, 0, 0x10, 0x00, 0x80, 0x00, 0x00, 0xAA, 0x00, 0x38, 0x9B, 0x71]) v.setUint8(p++, byte)
+	s('data'); u32(dataSize)
+	let dv = new DataView(buf, p)
+	for (let i = 0; i < samples.length; i++) dv.setInt16(i * 2, Math.round(samples[i] < 0 ? samples[i] * 32768 : samples[i] * 32767), true)
+	return new Uint8Array(buf)
+}
+
+{
+	let sig = sine(1000)
+	let ext = await decode(buildExtensibleWav({ bitDepth: 16, samples: sig }))
+	let plain = await decode(buildWav({ bitDepth: 16, samples: sig }))
+	ok(ext.sampleRate === 44100, 'extensible: sampleRate')
+	ok(ext.channelData[0].length === 1000, 'extensible: frames')
+	let same = ext.channelData[0].every((x, i) => x === plain.channelData[0][i])
+	ok(same, 'extensible PCM decodes identically to standard PCM')
+	// extensible IEEE float (subformat 0x0003)
+	let extF = await decode(buildExtensibleWav({ bitDepth: 16, subFormat: 3, samples: sig }))
+	ok(extF.channelData.length === 1, 'extensible float subformat parses')
+}
+
+// ===== G.711 A-law / µ-law (real ffmpeg fixtures) =====
+
+function corr(a, b) {
+	let n = Math.min(a.length, b.length), sa = 0, sb = 0, sab = 0
+	for (let i = 0; i < n; i++) { sa += a[i] * a[i]; sb += b[i] * b[i]; sab += a[i] * b[i] }
+	return sab / Math.sqrt(sa * sb)
+}
+
+for (let name of ['alaw', 'mulaw']) {
+	let buf = new Uint8Array(readFileSync(new URL(`./fixtures/${name}.wav`, import.meta.url)))
+	let r = await decode(buf)
+	let ideal = sine(r.channelData[0].length, 440, 8000)
+	ok(r.sampleRate === 8000, `${name}: sampleRate 8000`)
+	ok(r.channelData.length === 1, `${name}: mono`)
+	ok(r.channelData[0].length === 2000, `${name}: 2000 frames`)
+	// 440Hz sine: correct decode correlates ~1; a sign flip would score ~-1
+	ok(corr(r.channelData[0], ideal) > 0.97, `${name}: matches 440Hz sine (sign + scale)`)
 }
 
 // ===== error handling =====
