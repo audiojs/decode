@@ -45,7 +45,7 @@
     "test": "node test.js",
     "test:browser": "node test.browser.js",
     "test:all": "node test.js && node test.browser.js",
-    "publish:all": "npm publish --workspaces && npm publish"
+    "publish:all": "for d in packages/* .; do id=$(node -p \"require('./$d/package.json').name+'@'+require('./$d/package.json').version\"); npm view \"$id\" version >/dev/null 2>&1 && echo \"skip $id\" || (cd \"$d\" && npm publish); done"
   },
   "repository": {
     "type": "git",
