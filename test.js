@@ -577,3 +577,16 @@ t('chunked stream yields multiple results', async () => {
 	for await (let r of decode(chunked(wav, 4096), 'wav')) count++
 	is(count > 1, true, 'multiple yields from stream')
 })
+
+// -- metadata wiring --
+
+t('meta: oga + opus tags', async () => {
+	let { oga, opus } = await import('./meta.js')
+	let v = oga(await readFile(new URL('./packages/decode-vorbis/fixtures/tagged.ogg', import.meta.url)))
+	is(v.meta.title, 'Lena Sine', 'oga title')
+	is(v.meta.artist, 'audiojs', 'oga artist')
+	is(v.sampleRate, 44100, 'oga sampleRate')
+	let o = opus(await readFile(new URL('./packages/decode-opus/fixtures/tagged.opus', import.meta.url)))
+	is(o.meta.album, 'Fixtures', 'opus album')
+	is(o.sampleRate, 48000, 'opus sampleRate')
+})

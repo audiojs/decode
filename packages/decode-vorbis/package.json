@@ -7,6 +7,7 @@
   "types": "decode-vorbis.d.ts",
   "exports": {
     ".": "./decode-vorbis.js",
+    "./meta": "./meta.js",
     "./package.json": "./package.json"
   },
   "files": [

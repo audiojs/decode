@@ -1,4 +1,6 @@
 import decode, { decoder } from './decode-opus.js'
+import { parseMeta } from './meta.js'
+import { readFileSync } from 'fs'
 import opus from 'audio-lena/opus'
 
 let pass = 0, fail = 0
@@ -27,6 +29,19 @@ console.log('Opus streaming')
 	let a = await dec.decode(buf)
 	dec.free()
 	ok((a.channelData[0]?.length || 0) > 0, 'decoded samples')
+}
+
+// ===== metadata (OpusTags) =====
+console.log('Opus metadata')
+{
+	let { meta, sampleRate } = parseMeta(readFileSync(new URL('./fixtures/tagged.opus', import.meta.url)))
+	ok(sampleRate === 48000, 'sampleRate 48000 (Opus decode rate)')
+	ok(meta.title === 'Lena Sine', 'title')
+	ok(meta.artist === 'audiojs', 'artist')
+	ok(meta.album === 'Fixtures', 'album')
+	ok(meta.track === '3', 'track (from TRACKNUMBER)')
+	ok(Array.isArray(meta.pictures), 'pictures array present')
+	ok(parseMeta(new Uint8Array([1, 2, 3, 4])) === null, 'non-ogg → null')
 }
 
 console.log(`\n${pass} passed, ${fail} failed`)

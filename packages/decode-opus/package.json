@@ -7,6 +7,7 @@
   "types": "decode-opus.d.ts",
   "exports": {
     ".": "./decode-opus.js",
+    "./meta": "./meta.js",
     "./package.json": "./package.json"
   },
   "files": [
