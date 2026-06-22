@@ -21,7 +21,7 @@ const { channelData, sampleRate } = await decode(anyAudioBuffer);
 | OGG Vorbis | [@audio/decode-vorbis](./packages/decode-vorbis) | 164 KB | WASM |
 | FLAC | [@audio/decode-flac](./packages/decode-flac) | 133 KB | WASM |
 | Opus | [@audio/decode-opus](./packages/decode-opus) | 178 KB | WASM |
-| M4A / AAC | [@audio/decode-aac](./packages/decode-aac) | 368 KB | WASM |
+| M4A / AAC / ALAC | [@audio/decode-aac](./packages/decode-aac) | 368 KB | WASM + JS |
 | QOA | [@audio/decode-qoa](./packages/decode-qoa) | 8 KB | JS |
 | AIFF | [@audio/decode-aiff](./packages/decode-aiff) | 20 KB | JS |
 | CAF | [@audio/decode-caf](./packages/decode-caf) | 7 KB | JS |
@@ -31,13 +31,20 @@ const { channelData, sampleRate } = await decode(anyAudioBuffer);
 
 ### Whole-file
 
-Auto-detects format. Input can be _ArrayBuffer_, _Uint8Array_, or _Buffer_.
+Auto-detects format. Input can be _ArrayBuffer_, _Uint8Array_, _Buffer_, or anything
+that materializes to bytes — a _Blob_/_File_ (browser file input, drag-drop) or a fetch _Response_.
 
 ```js
 import decode from 'audio-decode'
 
 let { channelData, sampleRate } = await decode(buf)
+let fromFile = await decode(fileInput.files[0])   // File
+let fromUrl  = await decode(await fetch(url))      // Response
 ```
+
+WAV covers PCM (8/16/24/32-bit int, 32/64-bit float), WAVE_FORMAT_EXTENSIBLE,
+G.711 A-law/µ-law, and IMA/MS ADPCM. CAF covers LPCM, A-law/µ-law, and IMA4.
+M4A decodes both AAC and ALAC (Apple Lossless) transparently.
 
 ### Chunked
 
@@ -98,10 +105,11 @@ Only list the codecs you need — each `@audio/decode-*` package bundles all its
 
 ### Metadata
 
-Read tags, pictures, markers and regions without decoding samples. Available for `wav`, `mp3`, `flac`.
+Read tags, pictures, markers and regions without decoding samples. Available for
+`wav`, `mp3`, `flac`, `oga` (Ogg Vorbis), `opus`, and `m4a`.
 
 ```js
-import { wav, mp3, flac } from 'audio-decode/meta'
+import { wav, mp3, flac, oga, opus, m4a } from 'audio-decode/meta'
 
 let { meta, sampleRate, markers, regions } = mp3(bytes)
 // meta: { title, artist, album, year, bpm, key, comment, pictures, raw, ... }
