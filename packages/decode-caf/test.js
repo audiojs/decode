@@ -336,6 +336,22 @@ console.log('data chunk -1 size')
 	ok(r.channelData[0].length === tone440.length, 'correct frame count')
 }
 
+// ---- Trailing chunks after data (#47 class) — must not be read as audio ----
+console.log('trailing chunk after data')
+{
+	let caf = buildCAF({ sampleRate: 44100, formatID: 'lpcm', formatFlags: 2, bitsPerChannel: 16, channelsPerFrame: 1, samples: [tone440] })
+	// append a 'free' chunk (12-byte header + 40-byte payload) after the data chunk
+	let junkLen = 40
+	let withJunk = new Uint8Array(caf.length + 12 + junkLen)
+	withJunk.set(caf)
+	let dv = new DataView(withJunk.buffer)
+	let p = caf.length
+	withJunk.set([0x66, 0x72, 0x65, 0x65], p) // 'free'
+	dv.setUint32(p + 4, 0, false); dv.setUint32(p + 8, junkLen, false)
+	let r = await decode(withJunk)
+	ok(r.channelData[0].length === tone440.length, 'frames capped to data size (no trailing junk)')
+}
+
 // ---- Lifecycle ----
 console.log('lifecycle')
 {

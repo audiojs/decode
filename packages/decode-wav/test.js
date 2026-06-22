@@ -157,6 +157,39 @@ let signal = sine(1000)
 	ok(near(r.channelData[0][50], signal[50], 0.00005), 'extra chunk: values correct')
 }
 
+// ===== trailing chunks after data (#47) — must not be read as audio =====
+
+{
+	// data chunk followed by a metadata chunk (e.g. LIST/cue/bext)
+	let signal = sine(100)
+	let dataSize = signal.length * 2
+	let junkSize = 40 // bytes of trailing chunk payload read as audio before the fix
+	let totalSize = 4 + (8 + 16) + (8 + dataSize) + (8 + junkSize)
+	let buf = new ArrayBuffer(8 + totalSize)
+	let v = new DataView(buf), p = 0
+	let s = (str) => { for (let i = 0; i < str.length; i++) v.setUint8(p++, str.charCodeAt(i)) }
+	let u16 = (x) => { v.setUint16(p, x, true); p += 2 }
+	let u32 = (x) => { v.setUint32(p, x, true); p += 4 }
+	s('RIFF'); u32(totalSize); s('WAVE')
+	s('fmt '); u32(16); u16(1); u16(1); u32(44100); u32(88200); u16(2); u16(16)
+	s('data'); u32(dataSize)
+	let dv = new DataView(buf, p)
+	for (let i = 0; i < signal.length; i++) dv.setInt16(i * 2, Math.round(signal[i] * 32767), true)
+	p += dataSize
+	s('LIST'); u32(junkSize); for (let i = 0; i < junkSize; i++) v.setUint8(p++, 0x55)
+	let r = await decode(new Uint8Array(buf))
+	ok(r.channelData[0].length === 100, 'trailing chunk: frames capped to data size')
+
+	// same, fed through the streaming decoder one byte-region at a time
+	let dec = await decoder()
+	let full = new Uint8Array(buf)
+	let mid = Math.floor(full.length / 2)
+	let n = dec.decode(full.subarray(0, mid)).channelData[0]?.length || 0
+	n += dec.decode(full.subarray(mid)).channelData[0]?.length || 0
+	dec.free()
+	ok(n === 100, 'trailing chunk: streaming also capped')
+}
+
 // ===== streaming decoder =====
 
 {

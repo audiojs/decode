@@ -23,7 +23,7 @@ export default async function decode(src) {
  * @returns {Promise<{decode(chunk: Uint8Array): {channelData, sampleRate}, flush(), free()}>}
  */
 export async function decoder() {
-	let hdr = null, left = null, freed = false
+	let hdr = null, left = null, freed = false, dataLeft = Infinity
 	return {
 		decode(data) {
 			if (freed) throw Error('Decoder already freed')
@@ -33,12 +33,17 @@ export async function decoder() {
 			if (!hdr) {
 				hdr = scanCafHdr(chunk)
 				if (!hdr) { left = chunk.slice(); return EMPTY }
+				dataLeft = hdr.dataSize
 				chunk = chunk.subarray(hdr.dataStart)
 			}
+			if (dataLeft <= 0) return EMPTY // past the data chunk — ignore trailing chunks
 			let fb = hdr.frameBytes
-			let complete = Math.floor(chunk.length / fb) * fb
-			if (!complete) { if (chunk.length) left = chunk.slice(); return EMPTY }
-			if (chunk.length > complete) left = chunk.subarray(complete).slice()
+			let avail = Math.min(chunk.length, dataLeft) // don't read past the declared data size
+			let complete = Math.floor(avail / fb) * fb
+			if (!complete) { if (chunk.length && dataLeft > chunk.length) left = chunk.slice(); return EMPTY }
+			dataLeft -= complete
+			let rest = chunk.subarray(complete)
+			if (rest.length && dataLeft > 0) left = rest.subarray(0, Math.min(rest.length, dataLeft)).slice()
 			return decodeCafRaw(chunk.subarray(0, complete), hdr)
 		},
 		flush() { left = null; return EMPTY },
@@ -78,13 +83,15 @@ function scanCafHdr(buf) {
 			if (!desc) return null
 			let dataStart = off + 4 // skip editCount
 			if (dataStart > buf.length) return null
+			// -1 (0xFFFF…) size means "until EOF" — read to end; else payload minus 4-byte editCount
+			let dataSize = (sizeHi === 0xFFFFFFFF && sizeLo === 0xFFFFFFFF) ? Infinity : Math.max(0, size - 4)
 			let { formatID, formatFlags, channelsPerFrame: ch, bitsPerChannel: bits } = desc
 			let bytesPerSample = bits >> 3
 			let frameBytes
 			if (formatID === 'alaw' || formatID === 'ulaw') frameBytes = ch
 			else frameBytes = ch * bytesPerSample
 			if (!frameBytes) return null
-			return { ...desc, dataStart, frameBytes }
+			return { ...desc, dataStart, frameBytes, dataSize }
 		}
 		if (size < 0) break
 		if (sizeHi === 0xFFFFFFFF && sizeLo === 0xFFFFFFFF) break
