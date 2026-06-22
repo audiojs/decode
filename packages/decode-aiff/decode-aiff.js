@@ -19,12 +19,12 @@ const ULAW_TBL = new Int16Array(256)
 		if (seg) val = (val + 256) << (seg - 1)
 		ALAW_TBL[i] = (ax & 0x80) ? val : -val
 
-		// mu-law
+		// mu-law (ITU-T G.711) — sign bit set ⇒ negative
 		let ux = ~i & 0xFF
 		seg = (ux >> 4) & 7
 		val = ((ux & 0x0F) << 3) + 132
 		val <<= seg
-		ULAW_TBL[i] = (ux & 0x80) ? (val - 132) : -(val - 132)
+		ULAW_TBL[i] = (ux & 0x80) ? (132 - val) : (val - 132)
 	}
 })()
 

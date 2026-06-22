@@ -709,5 +709,22 @@ console.log('logic: 32-bit float')
 	ok(rms(r.channelData[0]) > 0.05, 'has audio')
 }
 
+// ---- AIFF-C G.711 sign/scale regression (real ffmpeg fixtures, 440Hz sine) ----
+console.log('aifc G.711 vs reference sine')
+{
+	let sineRef = (n, freq = 440, sr = 8000) => Array.from({ length: n }, (_, i) => Math.sin(2 * Math.PI * freq * i / sr))
+	let corr = (a, b) => {
+		let n = Math.min(a.length, b.length), sa = 0, sb = 0, sab = 0
+		for (let i = 0; i < n; i++) { sa += a[i] * a[i]; sb += b[i] * b[i]; sab += a[i] * b[i] }
+		return sab / Math.sqrt(sa * sb)
+	}
+	for (let name of ['mulaw', 'alaw']) {
+		let r = await decode(readFileSync(new URL('./fixtures/' + name + '.aifc', import.meta.url)))
+		ok(r.sampleRate === 8000, name + ': sampleRate 8000')
+		// correct decode correlates ~+1 with the source sine; a sign flip scores ~-1
+		ok(corr(r.channelData[0], sineRef(r.channelData[0].length)) > 0.97, name + ': matches 440Hz sine (sign + scale)')
+	}
+}
+
 console.log(`\n${pass + fail} tests, ${pass} passed, ${fail} failed`)
 if (fail) process.exit(1)
