@@ -1,5 +1,6 @@
 import { readFileSync } from 'fs'
 import decode, { decoder } from './decode-aac.js'
+import { parseMeta } from './meta.js'
 
 let pass = 0, fail = 0
 function ok(cond, msg) {
@@ -256,6 +257,21 @@ console.log('performance')
 	let ms = (performance.now() - t0) / N
 	ok(ms < 200, 'M4A decode < 200ms (' + ms.toFixed(1) + 'ms)')
 	console.log('  ' + ms.toFixed(1) + 'ms/decode (249KB, 12.3s audio)')
+}
+
+// ===== metadata (iTunes ilst tags) =====
+console.log('M4A metadata')
+{
+	let { meta, sampleRate } = parseMeta(readFileSync(new URL('./fixtures/tagged.m4a', import.meta.url)))
+	ok(sampleRate === 44100, 'sampleRate from mp4a box')
+	ok(meta.title === 'Lena Sine', 'title (©nam)')
+	ok(meta.artist === 'audiojs', 'artist (©ART)')
+	ok(meta.album === 'Fixtures', 'album (©alb)')
+	ok(meta.year === '2026', 'year (©day)')
+	ok(meta.genre === 'Test', 'genre (©gen)')
+	ok(meta.track === '3', 'track (trkn)')
+	ok(meta.pictures.length === 1 && meta.pictures[0].mime === 'image/png', 'cover art (covr)')
+	ok(parseMeta(new Uint8Array([0, 0, 0, 8, 1, 2, 3, 4])) === null, 'non-MP4 → null')
 }
 
 console.log(`\n${pass + fail} tests, ${pass} passed, ${fail} failed`)

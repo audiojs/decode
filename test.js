@@ -580,8 +580,8 @@ t('chunked stream yields multiple results', async () => {
 
 // -- metadata wiring --
 
-t('meta: oga + opus tags', async () => {
-	let { oga, opus } = await import('./meta.js')
+t('meta: oga + opus + m4a tags', async () => {
+	let { oga, opus, m4a } = await import('./meta.js')
 	let v = oga(await readFile(new URL('./packages/decode-vorbis/fixtures/tagged.ogg', import.meta.url)))
 	is(v.meta.title, 'Lena Sine', 'oga title')
 	is(v.meta.artist, 'audiojs', 'oga artist')
@@ -589,4 +589,8 @@ t('meta: oga + opus tags', async () => {
 	let o = opus(await readFile(new URL('./packages/decode-opus/fixtures/tagged.opus', import.meta.url)))
 	is(o.meta.album, 'Fixtures', 'opus album')
 	is(o.sampleRate, 48000, 'opus sampleRate')
+	let m = m4a(await readFile(new URL('./packages/decode-aac/fixtures/tagged.m4a', import.meta.url)))
+	is(m.meta.title, 'Lena Sine', 'm4a title')
+	is(m.meta.track, '3', 'm4a track')
+	is(m.meta.pictures.length, 1, 'm4a cover art')
 })
