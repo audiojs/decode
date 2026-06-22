@@ -1,6 +1,6 @@
 # @audio/decode-aac
 
-Decode AAC/M4A audio to PCM float samples. FAAD2 compiled to WASM — works in Node.js and browsers, no native dependencies.
+Decode AAC/M4A and ALAC (Apple Lossless) audio to PCM float samples. AAC via FAAD2 (WASM); ALAC via a pure-JS port of Apple's reference decoder — auto-detected from the M4A sample entry. Works in Node.js and browsers, no native dependencies.
 
 ## Install
 
@@ -51,10 +51,19 @@ Creates a decoder instance for manual control.
 
 ## Formats
 
-- M4A / MP4 with AAC audio
+- M4A / MP4 with AAC audio (LC, HE-AAC v1/v2 — SBR, PS)
+- M4A / MP4 with ALAC (Apple Lossless), 16/20/24/32-bit — pure JS, bit-exact
 - Raw ADTS streams (.aac)
-- LC, HE-AAC v1/v2 (SBR, PS)
+
+## Metadata
+
+```js
+import { parseMeta } from '@audio/decode-aac/meta'
+
+let { meta, sampleRate } = parseMeta(m4aBytes)
+// meta: { title, artist, album, year, genre, track, ..., pictures }
+```
 
 ## License
 
-GPL-2.0 (FAAD2) — [krishnized](https://github.com/krishnized/license)
+AAC decoding: GPL-2.0 (FAAD2). ALAC decoding: Apache-2.0 (port of Apple's ALAC reference). — [krishnized](https://github.com/krishnized/license)

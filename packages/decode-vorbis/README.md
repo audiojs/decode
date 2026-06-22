@@ -18,6 +18,17 @@ let c = dec.flush()
 dec.free()
 ```
 
+## Metadata
+
+Read Vorbis comment tags (and cover art) without decoding audio:
+
+```js
+import { parseMeta } from '@audio/decode-vorbis/meta'
+
+let { meta, sampleRate } = parseMeta(oggBytes)
+// meta: { title, artist, album, year, genre, ..., pictures }
+```
+
 ## License
 
 [MIT](./LICENSE) · [ॐ](https://github.com/krishnized/license/)

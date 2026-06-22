@@ -47,6 +47,7 @@ Creates a decoder instance.
 - `lpcm` — 8, 16, 24, 32-bit signed integer (LE/BE), 32/64-bit float (LE/BE)
 - `alaw` — G.711 A-law
 - `ulaw` — G.711 mu-law
+- `ima4` — IMA/QuickTime ADPCM (iOS Voice Memos, GarageBand)
 
 ## License
 

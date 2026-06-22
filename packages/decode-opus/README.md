@@ -18,6 +18,17 @@ let c = dec.flush()
 dec.free()
 ```
 
+## Metadata
+
+Read OpusTags (Vorbis comment) metadata and cover art without decoding audio:
+
+```js
+import { parseMeta } from '@audio/decode-opus/meta'
+
+let { meta, sampleRate } = parseMeta(opusBytes)
+// meta: { title, artist, album, year, genre, ..., pictures }
+```
+
 ## License
 
 [MIT](./LICENSE) · [ॐ](https://github.com/krishnized/license/)
