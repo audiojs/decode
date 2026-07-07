@@ -1,5 +1,5 @@
 {
-  "name": "audio-decode",
+  "name": "@audio/decode",
   "version": "3.11.0",
   "description": "Decode audio data in node or browser",
   "type": "module",
@@ -73,10 +73,16 @@
     "pcm",
     "streaming"
   ],
-  "author": "ΔY <dfcreative@gmail.com>",
+  "author": "Dmitry Iv. <dfcreative@gmail.com>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/audiojs/audio-decode/issues"
   },
-  "homepage": "https://github.com/audiojs/audio-decode#readme"
+  "homepage": "https://github.com/audiojs/audio-decode#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  }
 }
