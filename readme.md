@@ -1,13 +1,13 @@
-# audio-decode [![test](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml)
+# @audio/decode [![test](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml)
 
 Decode any audio format to raw samples.<br>
 JS / WASM – no ffmpeg, no native bindings, works in both node and browser.<br>
 Small API, minimal size, near-native performance, lazy-loading, chunked decoding.
 
-[![npm install audio-decode](https://nodei.co/npm/audio-decode.png?mini=true)](https://npmjs.org/package/audio-decode/)
+[![npm install @audio/decode](https://nodei.co/npm/audio-decode.png?mini=true)](https://npmjs.org/package/@audio/decode/)
 
 ```js
-import decode from 'audio-decode';
+import decode from '@audio/decode';
 
 const { channelData, sampleRate } = await decode(anyAudioBuffer);
 ```
@@ -35,7 +35,7 @@ Auto-detects format. Input can be _ArrayBuffer_, _Uint8Array_, _Buffer_, or anyt
 that materializes to bytes — a _Blob_/_File_ (browser file input, drag-drop) or a fetch _Response_.
 
 ```js
-import decode from 'audio-decode'
+import decode from '@audio/decode'
 
 let { channelData, sampleRate } = await decode(buf)
 let fromFile = await decode(fileInput.files[0])   // File
@@ -58,7 +58,7 @@ await dec()                  // close
 ### Streaming
 
 ```js
-import decode from 'audio-decode'
+import decode from '@audio/decode'
 
 for await (let { channelData, sampleRate } of decode.mp3(response.body)) {
   // process chunks
@@ -78,7 +78,7 @@ For selective loading in the browser (avoids bundling all codecs):
 <script type="importmap">
 {
   "imports": {
-    "audio-decode": "https://esm.sh/audio-decode",
+    "@audio/decode": "https://esm.sh/audio-decode",
     "audio-type": "https://esm.sh/audio-type",
     "@audio/decode-mp3": "https://esm.sh/@audio/decode-mp3",
     "@audio/decode-wav": "https://esm.sh/@audio/decode-wav",
@@ -96,7 +96,7 @@ For selective loading in the browser (avoids bundling all codecs):
 }
 </script>
 <script type="module">
-  import decode from 'audio-decode'
+  import decode from '@audio/decode'
   let { channelData, sampleRate } = await decode(buf)
 </script>
 ```
@@ -109,7 +109,7 @@ Read tags, pictures, markers and regions without decoding samples. Available for
 `wav`, `mp3`, `flac`, `oga` (Ogg Vorbis), `opus`, and `m4a`.
 
 ```js
-import { wav, mp3, flac, oga, opus, m4a } from 'audio-decode/meta'
+import { wav, mp3, flac, oga, opus, m4a } from '@audio/decode/meta'
 
 let { meta, sampleRate, markers, regions } = mp3(bytes)
 // meta: { title, artist, album, year, bpm, key, comment, pictures, raw, ... }
