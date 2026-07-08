@@ -6,6 +6,14 @@
   "sideEffects": false,
   "main": "audio-decode.js",
   "types": "audio-decode.d.ts",
+  "files": [
+    "audio-decode.js",
+    "audio-decode.d.ts",
+    "stream.js",
+    "stream.d.ts",
+    "meta.js",
+    "test.html"
+  ],
   "exports": {
     ".": {
       "browser": "./audio-decode.js",
