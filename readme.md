@@ -42,9 +42,6 @@ let fromFile = await decode(fileInput.files[0])   // File
 let fromUrl  = await decode(await fetch(url))      // Response
 ```
 
-WAV covers PCM (8/16/24/32-bit int, 32/64-bit float), WAVE_FORMAT_EXTENSIBLE,
-G.711 A-law/µ-law, and IMA/MS ADPCM. CAF covers LPCM, A-law/µ-law, and IMA4.
-M4A decodes both AAC and ALAC (Apple Lossless) transparently.
 
 ### Chunked
 
