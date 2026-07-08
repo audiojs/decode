@@ -1,4 +1,4 @@
-# @audio/decode [![test](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/audio-decode/actions/workflows/test.js.yml)
+# @audio/decode [![test](https://github.com/audiojs/decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/decode/actions/workflows/test.js.yml)
 
 Decode any audio format to raw samples.<br>
 JS / WASM – no ffmpeg, no native bindings, works in both node and browser.<br>
@@ -142,7 +142,7 @@ worker.onmessage = ({ data }) => { /* { channelData, sampleRate } */ }
 
 ## See also
 
-* [audio-encode](https://github.com/audiojs/audio-encode) – encode PCM into any audio format.
+* [encode](https://github.com/audiojs/encode) – encode PCM into any audio format.
 * [audio-type](https://github.com/audiojs/audio-type) – detect audio format from buffer.
 <!--
 * [wasm-audio-decoders](https://github.com/eshaz/wasm-audio-decoders) – compact & fast WASM audio decoders.

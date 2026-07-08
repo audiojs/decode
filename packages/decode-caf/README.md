@@ -2,7 +2,7 @@
 
 Decode Core Audio Format (CAF) audio to PCM float samples.
 
-Part of [audio-decode](https://github.com/audiojs/audio-decode).
+Part of [decode](https://github.com/audiojs/decode).
 
 ## Install
 

@@ -2,7 +2,7 @@
 
 Decode AMR-NB and AMR-WB audio to PCM float samples. [opencore-amr](https://sourceforge.net/projects/opencore-amr/) compiled to WASM — works in Node.js and browsers.
 
-Part of [audio-decode](https://github.com/audiojs/audio-decode).
+Part of [decode](https://github.com/audiojs/decode).
 
 ## Install
 

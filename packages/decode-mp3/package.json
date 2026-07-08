@@ -35,10 +35,10 @@
   },
   "license": "MIT",
   "author": "audiojs",
-  "homepage": "https://github.com/audiojs/audio-decode/tree/main/packages/decode-mp3#readme",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-mp3#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/audio-decode.git",
+    "url": "git+https://github.com/audiojs/decode.git",
     "directory": "packages/decode-mp3"
   },
   "dependencies": {

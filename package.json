@@ -57,7 +57,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/audio-decode.git"
+    "url": "git+https://github.com/audiojs/decode.git"
   },
   "keywords": [
     "audio",
@@ -84,9 +84,9 @@
   "author": "Dmitry Iv. <dfcreative@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/audiojs/audio-decode/issues"
+    "url": "https://github.com/audiojs/decode/issues"
   },
-  "homepage": "https://github.com/audiojs/audio-decode#readme",
+  "homepage": "https://github.com/audiojs/decode#readme",
   "publishConfig": {
     "access": "public"
   },

@@ -2,7 +2,7 @@
 
 Decode WebM audio (Opus and Vorbis) to PCM float samples. EBML demuxer in pure JS, codec decoding via WASM.
 
-Part of [audio-decode](https://github.com/audiojs/audio-decode).
+Part of [decode](https://github.com/audiojs/decode).
 
 ## Install
 
