@@ -4,6 +4,10 @@
   "description": "Decode WAV audio to PCM samples",
   "type": "module",
   "main": "decode-wav.js",
+  "files": [
+    "decode-wav.js",
+    "meta.js"
+  ],
   "exports": {
     ".": "./decode-wav.js",
     "./meta": "./meta.js",
