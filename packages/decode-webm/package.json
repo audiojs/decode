@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-webm",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Decode WebM audio (Opus, Vorbis) to PCM samples",
   "type": "module",
   "main": "decode-webm.js",

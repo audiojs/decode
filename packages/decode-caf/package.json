@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-caf",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Decode CAF (Core Audio Format) audio to PCM samples",
   "type": "module",
   "main": "decode-caf.js",
