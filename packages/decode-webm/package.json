@@ -43,10 +43,11 @@
   "homepage": "https://github.com/audiojs/decode-webm#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/decode-webm.git"
+    "url": "git+https://github.com/audiojs/decode-webm.git",
+    "directory": "packages/decode-webm"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "bugs": "https://github.com/audiojs/decode-webm/issues",
   "scripts": {
@@ -54,5 +55,6 @@
     "prepack": "npm run build",
     "test": "node test.js"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

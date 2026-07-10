@@ -50,7 +50,8 @@
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

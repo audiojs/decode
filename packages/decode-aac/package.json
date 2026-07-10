@@ -51,10 +51,12 @@
   "bugs": "https://github.com/audiojs/decode-aac/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/decode-aac.git"
+    "url": "git+https://github.com/audiojs/decode-aac.git",
+    "directory": "packages/decode-aac"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

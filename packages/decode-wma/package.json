@@ -45,10 +45,12 @@
   "bugs": "https://github.com/audiojs/decode-wma/issues",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/decode-wma.git"
+    "url": "git+https://github.com/audiojs/decode-wma.git",
+    "directory": "packages/decode-wma"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

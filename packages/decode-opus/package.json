@@ -50,7 +50,8 @@
     "ogg-opus-decoder": "^1.7.3"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

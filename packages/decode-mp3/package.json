@@ -51,7 +51,8 @@
     "mpg123-decoder": "^1.0.3"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

@@ -34,5 +34,14 @@
   "scripts": {
     "test": "node test.js"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-wav"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false
 }

@@ -19,10 +19,28 @@
   "dependencies": {
     "@audio/decode": "^3.11.1"
   },
-  "keywords": ["audio", "decode", "wav", "mp3", "flac", "ogg", "opus", "aac", "audiobuffer"],
+  "keywords": [
+    "audio",
+    "decode",
+    "wav",
+    "mp3",
+    "flac",
+    "ogg",
+    "opus",
+    "aac",
+    "audiobuffer"
+  ],
   "license": "MIT",
   "author": "Dmitry Iv. <dfcreative@gmail.com>",
-  "repository": { "type": "git", "url": "git+https://github.com/audiojs/decode.git", "directory": "packages/audio-decode" },
-  "engines": { "node": ">=16" },
-  "publishConfig": { "access": "public" }
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/audio-decode"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

@@ -36,14 +36,16 @@
   "homepage": "https://github.com/audiojs/decode-aiff#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/decode-aiff.git"
+    "url": "git+https://github.com/audiojs/decode-aiff.git",
+    "directory": "packages/decode-aiff"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "bugs": "https://github.com/audiojs/decode-aiff/issues",
   "scripts": {
     "test": "node test.js"
   },
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }

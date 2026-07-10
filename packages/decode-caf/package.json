@@ -40,11 +40,13 @@
   "homepage": "https://github.com/audiojs/decode-caf#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/audiojs/decode-caf.git"
+    "url": "git+https://github.com/audiojs/decode-caf.git",
+    "directory": "packages/decode-caf"
   },
   "engines": {
-    "node": ">=16"
+    "node": ">=18"
   },
   "bugs": "https://github.com/audiojs/decode-caf/issues",
-  "audio": "./audio.js"
+  "audio": "./audio.js",
+  "sideEffects": false
 }
