@@ -1,18 +1,20 @@
 {
   "name": "@audio/decode-aiff",
-  "version": "1.1.4",
+  "version": "1.2.0",
   "description": "Decode AIFF/AIFF-C audio to PCM samples",
   "type": "module",
   "main": "decode-aiff.js",
   "types": "decode-aiff.d.ts",
   "exports": {
     ".": "./decode-aiff.js",
+    "./audio": "./audio.js",
     "./package.json": "./package.json"
   },
   "files": [
     "decode-aiff.js",
     "decode-aiff.d.ts",
-    "LICENSE"
+    "LICENSE",
+    "audio.js"
   ],
   "keywords": [
     "aiff",
@@ -38,5 +40,6 @@
   "bugs": "https://github.com/audiojs/decode-aiff/issues",
   "scripts": {
     "test": "node test.js"
-  }
+  },
+  "audio": "./audio.js"
 }

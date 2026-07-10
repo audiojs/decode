@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-mp3",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Decode MP3 audio via mpg123 WASM — self-contained bundle",
   "type": "module",
   "main": "decode-mp3.js",
@@ -8,13 +8,15 @@
   "exports": {
     ".": "./decode-mp3.js",
     "./meta": "./meta.js",
+    "./audio": "./audio.js",
     "./package.json": "./package.json"
   },
   "files": [
     "decode-mp3.js",
     "decode-mp3.d.ts",
     "meta.js",
-    "LICENSE"
+    "LICENSE",
+    "audio.js"
   ],
   "scripts": {
     "build": "bash build.sh",
@@ -46,5 +48,6 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "audio": "./audio.js"
 }

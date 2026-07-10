@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-flac",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Decode FLAC audio via libflac WASM — self-contained bundle",
   "type": "module",
   "main": "decode-flac.js",
@@ -8,13 +8,15 @@
   "exports": {
     ".": "./decode-flac.js",
     "./meta": "./meta.js",
+    "./audio": "./audio.js",
     "./package.json": "./package.json"
   },
   "files": [
     "decode-flac.js",
     "decode-flac.d.ts",
     "meta.js",
-    "LICENSE"
+    "LICENSE",
+    "audio.js"
   ],
   "scripts": {
     "build": "bash build.sh",
@@ -45,5 +47,6 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "audio": "./audio.js"
 }

@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-vorbis",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Decode Ogg Vorbis audio via libvorbis WASM — self-contained bundle",
   "type": "module",
   "main": "decode-vorbis.js",
@@ -8,13 +8,15 @@
   "exports": {
     ".": "./decode-vorbis.js",
     "./meta": "./meta.js",
+    "./audio": "./audio.js",
     "./package.json": "./package.json"
   },
   "files": [
     "decode-vorbis.js",
     "meta.js",
     "decode-vorbis.d.ts",
-    "LICENSE"
+    "LICENSE",
+    "audio.js"
   ],
   "scripts": {
     "build": "bash build.sh",
@@ -45,5 +47,6 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "audio": "./audio.js"
 }

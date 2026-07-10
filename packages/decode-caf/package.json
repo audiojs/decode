@@ -1,18 +1,20 @@
 {
   "name": "@audio/decode-caf",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "description": "Decode CAF (Core Audio Format) audio to PCM samples",
   "type": "module",
   "main": "decode-caf.js",
   "types": "decode-caf.d.ts",
   "exports": {
     ".": "./decode-caf.js",
+    "./audio": "./audio.js",
     "./package.json": "./package.json"
   },
   "files": [
     "decode-caf.js",
     "decode-caf.d.ts",
-    "LICENSE"
+    "LICENSE",
+    "audio.js"
   ],
   "scripts": {
     "test": "node test.js"
@@ -39,5 +41,6 @@
   "engines": {
     "node": ">=16"
   },
-  "bugs": "https://github.com/audiojs/decode-caf/issues"
+  "bugs": "https://github.com/audiojs/decode-caf/issues",
+  "audio": "./audio.js"
 }
