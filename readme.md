@@ -151,4 +151,6 @@ worker.onmessage = ({ data }) => { /* { channelData, sampleRate } */ }
 * [ffmpeg.wasm](https://github.com/ffmpegwasm/ffmpeg.wasm) – full encoding/decoding library.
 -->
 
+<p align="center">Licensing: the umbrella and most codec atoms are MIT; three atoms inherit their upstream codec implementation's license — <a href="./packages/decode-aac">@audio/decode-aac</a> GPL-2.0, <a href="./packages/decode-wma">@audio/decode-wma</a> GPL-2.0-or-later, <a href="./packages/decode-amr">@audio/decode-amr</a> Apache-2.0. Install only the codecs whose licenses fit your project — the umbrella loads them on demand.</p>
+
 <p align="center"><a href="./LICENSE">MIT</a> • <a href="https://github.com/krishnized/license/">ॐ</a>
