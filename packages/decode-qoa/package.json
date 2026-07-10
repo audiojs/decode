@@ -7,14 +7,18 @@
   "types": "decode-qoa.d.ts",
   "exports": {
     ".": "./decode-qoa.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "decode-qoa.js",
     "decode-qoa.d.ts",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "scripts": {
     "build": "bash build.sh",

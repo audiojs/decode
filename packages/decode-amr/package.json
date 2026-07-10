@@ -7,7 +7,10 @@
   "types": "decode-amr.d.ts",
   "exports": {
     ".": "./decode-amr.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -20,7 +23,8 @@
     "decode-amr.d.ts",
     "src/amr.wasm.cjs",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "keywords": [
     "amr",

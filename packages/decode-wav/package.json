@@ -7,12 +7,16 @@
   "files": [
     "decode-wav.js",
     "meta.js",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "exports": {
     ".": "./decode-wav.js",
     "./meta": "./meta.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "keywords": [

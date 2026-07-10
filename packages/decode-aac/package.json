@@ -8,7 +8,10 @@
   "exports": {
     ".": "./decode-aac.js",
     "./meta": "./meta.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -26,7 +29,8 @@
     "decode-aac.d.ts",
     "src/aac.wasm.cjs",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "keywords": [
     "aac",

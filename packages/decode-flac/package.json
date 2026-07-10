@@ -8,7 +8,10 @@
   "exports": {
     ".": "./decode-flac.js",
     "./meta": "./meta.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -16,7 +19,8 @@
     "decode-flac.d.ts",
     "meta.js",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "scripts": {
     "build": "bash build.sh",

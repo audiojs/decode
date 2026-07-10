@@ -7,7 +7,10 @@
   "types": "decode-wma.d.ts",
   "exports": {
     ".": "./decode-wma.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -15,7 +18,8 @@
     "decode-wma.d.ts",
     "src/wma.wasm.cjs",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "scripts": {
     "build": "bash build.sh",

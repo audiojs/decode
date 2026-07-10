@@ -7,14 +7,18 @@
   "types": "decode-caf.d.ts",
   "exports": {
     ".": "./decode-caf.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "decode-caf.js",
     "decode-caf.d.ts",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "scripts": {
     "test": "node test.js"

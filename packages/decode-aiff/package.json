@@ -7,14 +7,18 @@
   "types": "decode-aiff.d.ts",
   "exports": {
     ".": "./decode-aiff.js",
-    "./audio": "./audio.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [
     "decode-aiff.js",
     "decode-aiff.d.ts",
     "LICENSE",
-    "audio.js"
+    "audio.js",
+    "audio.d.ts"
   ],
   "keywords": [
     "aiff",
