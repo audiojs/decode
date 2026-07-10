@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-aac",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Decode AAC/M4A (FAAD2 WASM) and ALAC/Apple Lossless (pure JS) to PCM samples",
   "type": "module",
   "main": "decode-aac.js",

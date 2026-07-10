@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-aiff",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Decode AIFF/AIFF-C audio to PCM samples",
   "type": "module",
   "main": "decode-aiff.js",
