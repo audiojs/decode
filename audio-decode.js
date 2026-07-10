@@ -77,7 +77,7 @@ export async function* decodeChunked(source, format) {
 
 // --- format registration ---
 
-function reg(name, load) {
+function reg(name, load, dedupe) {
 	decode[name] = fmt(name, async () => {
 		let mod = await load()
 		// @audio/* packages export { decoder, default }
@@ -86,7 +86,8 @@ function reg(name, load) {
 			return streamDecoder(
 				chunk => codec.decode(chunk),
 				codec.flush ? () => codec.flush() : null,
-				codec.free ? () => codec.free() : null
+				codec.free ? () => codec.free() : null,
+				dedupe
 			)
 		}
 		// wasm-audio-decoders export class with .ready
@@ -96,7 +97,8 @@ function reg(name, load) {
 		return streamDecoder(
 			chunk => codec.decode(chunk),
 			codec.flush ? () => codec.flush() : null,
-			codec.free ? () => codec.free() : null
+			codec.free ? () => codec.free() : null,
+			dedupe
 		)
 	})
 }
@@ -121,23 +123,25 @@ function fmt(name, init) {
 }
 
 // --- codecs ---
+// dedupe (3rd arg): decoder upmixes mono sources to duplicate stereo (verified for mp3;
+// aac/wma flagged conservatively — same lossy-wasm family). Exact containers never dedupe.
 
-reg('mp3', () => import('@audio/decode-mp3'))
+reg('mp3', () => import('@audio/decode-mp3'), true)
 reg('flac', () => import('@audio/decode-flac'))
 reg('opus', () => import('@audio/decode-opus'))
 reg('oga', () => import('@audio/decode-vorbis'))
 
-reg('m4a', () => import('@audio/decode-aac'))
+reg('m4a', () => import('@audio/decode-aac'), true)
 
 reg('wav', () => import('@audio/decode-wav'))
 reg('qoa', () => import('@audio/decode-qoa'))
 
-reg('aac', () => import('@audio/decode-aac'))
+reg('aac', () => import('@audio/decode-aac'), true)
 reg('aiff', () => import('@audio/decode-aiff'))
 reg('caf', () => import('@audio/decode-caf'))
 reg('webm', () => import('@audio/decode-webm'))
 reg('amr', () => import('@audio/decode-amr'))
-reg('wma', () => import('@audio/decode-wma'))
+reg('wma', () => import('@audio/decode-wma'), true)
 
 /**
  * StreamDecoder — a callable function:
@@ -146,26 +150,30 @@ reg('wma', () => import('@audio/decode-wma'))
  * dec.flush() — flush without freeing
  * dec.free()  — release resources without flushing
  */
-function streamDecoder(onDecode, onFlush, onFree) {
+function streamDecoder(onDecode, onFlush, onFree, dedupe) {
 	let done = false
+	// dedupe: this codec's decoder upmixes mono sources to duplicate stereo — collapse it
+	// back. Sticky per stream: the moment channels genuinely differ, never collapse again
+	// (a real stereo file with a dual-mono passage must not flicker channel count).
+	let dd = dedupe ? { live: true } : null
 	let fn = async (chunk) => {
 		if (chunk) {
 			if (done) throw Error('Decoder already freed')
-			try { return norm(await onDecode(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk))) }
+			try { return norm(await onDecode(chunk instanceof Uint8Array ? chunk : new Uint8Array(chunk)), dd) }
 			catch (e) { done = true; onFree?.(); throw e }
 		}
 		// null/undefined = end of stream
 		if (done) return EMPTY
 		done = true
 		try {
-			let result = onFlush ? norm(await onFlush()) : EMPTY
+			let result = onFlush ? norm(await onFlush(), dd) : EMPTY
 			onFree?.()
 			return result
 		} catch (e) { onFree?.(); throw e }
 	}
 	fn.flush = async () => {
 		if (done) return EMPTY
-		return onFlush ? norm(await onFlush()) : EMPTY
+		return onFlush ? norm(await onFlush(), dd) : EMPTY
 	}
 	fn.free = () => {
 		if (done) return
@@ -176,17 +184,19 @@ function streamDecoder(onDecode, onFlush, onFree) {
 }
 
 // extract { channelData, sampleRate } from codec result
-function norm(r) {
+function norm(r, dd) {
 	if (!r?.channelData?.length) return EMPTY
 	let { channelData, sampleRate, samplesDecoded } = r
 	if (samplesDecoded != null && samplesDecoded < channelData[0].length)
 		channelData = channelData.map(ch => ch.subarray(0, samplesDecoded))
 	if (!channelData[0]?.length) return EMPTY
-	// collapse duplicate stereo to mono (some decoders always output 2ch for mono sources)
-	if (channelData.length === 2) {
+	// collapse duplicate stereo to mono — only for codecs flagged as mono-upmixing;
+	// exact containers (wav/flac/…) keep their declared width (dual-mono is legitimate)
+	if (dd?.live && channelData.length === 2) {
 		let a = channelData[0], b = channelData[1], same = true
 		for (let i = 0; i < a.length; i += 37) { if (a[i] !== b[i]) { same = false; break } }
 		if (same) channelData = [a]
+		else dd.live = false
 	}
 	return { channelData, sampleRate }
 }

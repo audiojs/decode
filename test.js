@@ -457,6 +457,25 @@ t('stereo m4a decoded as 2 channels', async () => {
 	is(r.channelData.length, 2, 'stereo m4a returns 2 channels')
 })
 
+t('dual-mono wav keeps its declared 2 channels', async () => {
+	// exact containers must not collapse identical channels — dual-mono masters are
+	// legitimate; the mono-upmix dedupe applies only to flagged lossy codecs (mp3 class)
+	let n = 4410, mono = new Float32Array(n)
+	for (let i = 0; i < n; i++) mono[i] = 0.3 * Math.sin(2 * Math.PI * 440 * i / 44100)
+	// minimal PCM float32 stereo wav with identical channels
+	let hdr = 44, bytes = new Uint8Array(hdr + n * 8), dv = new DataView(bytes.buffer)
+	let w = (o, s) => { for (let i = 0; i < s.length; i++) bytes[o + i] = s.charCodeAt(i) }
+	w(0, 'RIFF'); dv.setUint32(4, 36 + n * 8, true); w(8, 'WAVEfmt ')
+	dv.setUint32(16, 16, true); dv.setUint16(20, 3, true); dv.setUint16(22, 2, true)
+	dv.setUint32(24, 44100, true); dv.setUint32(28, 44100 * 8, true)
+	dv.setUint16(32, 8, true); dv.setUint16(34, 32, true)
+	w(36, 'data'); dv.setUint32(40, n * 8, true)
+	for (let i = 0; i < n; i++) { dv.setFloat32(hdr + i * 8, mono[i], true); dv.setFloat32(hdr + i * 8 + 4, mono[i], true) }
+	let r = await decode(bytes)
+	is(r.channelData.length, 2, 'dual-mono wav stays stereo')
+	is(r.channelData[0].length, n, 'full frame count')
+})
+
 // -- decoders extensibility --
 
 t('custom decoder registration', async () => {
