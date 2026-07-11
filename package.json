@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode",
-  "version": "3.11.1",
+  "version": "3.11.2",
   "description": "Decode audio data in node or browser",
   "type": "module",
   "sideEffects": false,
@@ -92,5 +92,6 @@
   },
   "engines": {
     "node": ">=18"
-  }
+  },
+  "funding": "https://github.com/sponsors/audiojs"
 }

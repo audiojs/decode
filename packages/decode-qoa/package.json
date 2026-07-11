@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-qoa",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Decode QOA (Quite OK Audio) — self-contained bundle",
   "type": "module",
   "main": "decode-qoa.js",
@@ -50,5 +50,6 @@
     "node": ">=18"
   },
   "audio": "./audio.js",
-  "sideEffects": false
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
 }

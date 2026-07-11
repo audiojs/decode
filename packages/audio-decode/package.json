@@ -1,6 +1,6 @@
 {
   "name": "audio-decode",
-  "version": "3.11.2",
+  "version": "3.11.3",
   "description": "Decode audio (wav, mp3, flac, ogg, opus, aac, …) to AudioBuffer — unscoped alias of @audio/decode",
   "type": "module",
   "sideEffects": false,
@@ -14,7 +14,8 @@
   "files": [
     "audio-decode.js",
     "stream.js",
-    "meta.js"
+    "meta.js",
+    "audio-decode.d.ts"
   ],
   "dependencies": {
     "@audio/decode": "^3.11.1"
@@ -42,5 +43,7 @@
   },
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "funding": "https://github.com/sponsors/audiojs",
+  "types": "audio-decode.d.ts"
 }

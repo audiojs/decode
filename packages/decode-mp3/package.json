@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-mp3",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Decode MP3 audio via mpg123 WASM — self-contained bundle",
   "type": "module",
   "main": "decode-mp3.js",
@@ -54,5 +54,6 @@
     "node": ">=18"
   },
   "audio": "./audio.js",
-  "sideEffects": false
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
 }
