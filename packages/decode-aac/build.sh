@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build FAAD2 + glue → aac.wasm
+# Build FAAD2 + glue -> aac.wasm.js
 set -e
 
 # find python 3.10+ for emscripten
@@ -14,7 +14,7 @@ if [ -z "$EMSDK_PYTHON" ]; then
 fi
 
 FAAD=lib/faad2
-OUT=src/aac.wasm
+OUT=src/aac.wasm.js
 
 # read FAAD2 version from source of truth
 FAAD_VERSION=$($EMSDK_PYTHON -c "import json; print(json.load(open('$FAAD/properties.json'))['PACKAGE_VERSION'])" 2>/dev/null \
@@ -24,6 +24,7 @@ FAAD_VERSION=$($EMSDK_PYTHON -c "import json; print(json.load(open('$FAAD/proper
 # collect all FAAD2 libfaad C sources
 SRCS=$(find $FAAD/libfaad -name '*.c' | sort)
 
+# Single-file WASM uses no host I/O. Omitting Emscripten's Node loader keeps the module graph host-neutral.
 emcc \
   $SRCS \
   src/aac_glue.c \
@@ -55,19 +56,15 @@ emcc \
   -s INITIAL_MEMORY=2097152 \
   -s MAXIMUM_MEMORY=67108864 \
   -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
   -s EXPORT_NAME=createAAC \
-  -s ENVIRONMENT='web,node' \
+  -s ENVIRONMENT='web,worklet,shell' \
+  -s TEXTDECODER=1 \
   -s FILESYSTEM=0 \
   -s ASSERTIONS=0 \
   -s MALLOC=emmalloc \
   -s SINGLE_FILE=1 \
   --no-entry \
-  -o $OUT.cjs
+  -o "$OUT"
 
-# Avoid a static node:fs require so browser bundlers don't try to resolve it.
-perl -0pi -e 's/var fs=require\("node:fs"\);/var _nfs="node:"+"fs";var fs=require(_nfs);/' $OUT.cjs
-
-# append CJS export
-echo "if(typeof module!=='undefined')module.exports=createAAC;" >> $OUT.cjs
-
-echo "Built: $(wc -c < $OUT.cjs) bytes (FAAD2 $FAAD_VERSION)"
+echo "Built: $(wc -c < "$OUT") bytes (FAAD2 $FAAD_VERSION)"

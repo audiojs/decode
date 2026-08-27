@@ -9,4 +9,7 @@ npx esbuild src/decode-webm.src.js \
   --outfile=decode-webm.js \
   --platform=node \
   --minify \
-  --external:./src/opus.wasm.js
+  --external:./src/opus.wasm.js \
+  --external:@audio/decode-aac \
+  --external:@audio/decode-mp3 \
+  --external:@audio/decode-flac

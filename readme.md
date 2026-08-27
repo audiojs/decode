@@ -22,10 +22,12 @@ const { channelData, sampleRate } = await decode(anyAudioBuffer);
 | FLAC | [@audio/decode-flac](./packages/decode-flac) | 135 KB | WASM |
 | Opus | [@audio/decode-opus](./packages/decode-opus) | 166 KB | WASM |
 | M4A / AAC / ALAC | [@audio/decode-aac](./packages/decode-aac) | 368 KB | WASM + JS |
+| MP4 / MOV / M4V / 3GP video | [@audio/decode-mp4](./packages/decode-mp4) | 12 KB + codec | JS demux |
 | QOA | [@audio/decode-qoa](./packages/decode-qoa) | 8 KB | JS |
 | AIFF | [@audio/decode-aiff](./packages/decode-aiff) | 20 KB | JS |
 | CAF | [@audio/decode-caf](./packages/decode-caf) | 9 KB | JS |
-| WebM | [@audio/decode-webm](./packages/decode-webm) | 250 KB | WASM |
+| WebM / MKV video | [@audio/decode-webm](./packages/decode-webm) | 250 KB | WASM |
+| AVI video | [@audio/decode-avi](./packages/decode-avi) | 8 KB + codec | JS demux |
 | AMR | [@audio/decode-amr](./packages/decode-amr) | 241 KB | WASM |
 | WMA | [@audio/decode-wma](./packages/decode-wma) | 91 KB | WASM |
 
@@ -63,7 +65,23 @@ for await (let { channelData, sampleRate } of decode.mp3(response.body)) {
 
 Works with `ReadableStream`, `fetch` body, Node stream, or any async iterable.
 
-Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `amr`, `wma`.
+Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `mp4`, `mov`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `mkv`, `avi`, `amr`, `wma`.
+
+### Video files
+
+Video containers decode straight to their audio track — the video stream is skipped, no ffmpeg involved:
+
+```js
+let { channelData, sampleRate } = await decode(await fetch('trailer.mp4'))
+```
+
+| Container | Package | Audio codecs |
+|---|---|---|
+| MP4, MOV, M4V, 3GP | [@audio/decode-mp4](./packages/decode-mp4) | AAC, ALAC, MP3, FLAC, Opus, AMR, PCM, G.711 |
+| WebM, MKV | [@audio/decode-webm](./packages/decode-webm) | Opus, Vorbis, AAC, ALAC, MP3, FLAC, PCM |
+| AVI | [@audio/decode-avi](./packages/decode-avi) | PCM, MP3, AAC, G.711 |
+
+AC-3, E-AC-3 and DTS tracks throw an error naming the codec.
 
 ### Browser
 
@@ -78,7 +96,9 @@ Works from a CDN without a bundler. Codecs load on demand via dynamic import, on
 
 For self-hosting, use an import map to point `@audio/decode` and each needed `@audio/decode-*` package to local files. Codec-internal files load by relative path.
 
-`@audio/decode-flac`, `@audio/decode-vorbis`, `@audio/decode-mp3`, and `@audio/decode-wav` decode inside an `AudioWorklet` without `Blob`, `TextDecoder`, `Worker`, or `fetch`.
+Each codec package's main export works in an `AudioWorklet` without `Blob`, `TextDecoder`, `Worker`, or `fetch`. Import codec packages directly because `@audio/decode` uses dynamic imports.
+
+Initialize WASM before rendering. Decoding runs on the worklet thread and can interrupt audio output.
 
 ### Synchronous codecs
 

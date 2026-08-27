@@ -5,6 +5,8 @@
  * let { channelData, sampleRate } = await decode(wmabuf)
  */
 
+import createWMA from './src/wma.wasm.js'
+
 const EMPTY = Object.freeze({ channelData: [], sampleRate: 0 })
 
 // ASF GUIDs (16 bytes each, little-endian)
@@ -325,18 +327,7 @@ let _modP
 
 async function getMod() {
 	if (_modP) return _modP
-	let p = (async () => {
-		let createWMA
-		if (typeof process !== 'undefined' && process.versions?.node) {
-			let m = 'module'
-			let { createRequire } = await import(m)
-			createWMA = createRequire(import.meta.url)('./src/wma.wasm.cjs')
-		} else {
-			let mod = await import('./src/wma.wasm.cjs')
-			createWMA = mod.default || mod
-		}
-		return createWMA()
-	})()
+	let p = createWMA()
 	_modP = p
 	try { return await p }
 	catch (e) { _modP = null; throw e }

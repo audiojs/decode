@@ -1,3 +1,5 @@
+import createOpus from './src/opus.wasm.js'
+
 const ERRORS = new Map([
 	[-1, 'OPUS_BAD_ARG'],
 	[-2, 'OPUS_BUFFER_TOO_SMALL'],
@@ -12,7 +14,7 @@ let modulePromise
 
 async function getModule() {
 	if (modulePromise) return modulePromise
-	let promise = import('./src/opus.wasm.js').then(module => module.default())
+	let promise = createOpus()
 	modulePromise = promise
 	try { return await promise }
 	catch (error) { modulePromise = null; throw error }

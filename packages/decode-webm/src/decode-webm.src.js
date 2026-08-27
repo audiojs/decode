@@ -1,5 +1,7 @@
 /**
- * WebM audio decoder for Opus and Vorbis
+ * WebM / Matroska audio decoder — Opus, Vorbis, AAC, MP3, FLAC, ALAC, PCM
+ * Opus and Vorbis (the WebM codecs) are bundled and decode synchronously; the Matroska-only codecs
+ * load their package on the chunk that completes the track header, where decode() returns a Promise.
  *
  * let { channelData, sampleRate } = await decode(webmbuf)
  * let dec = await decoder(); let result = dec.decode(chunk)
@@ -22,6 +24,7 @@ const ID_CODEC_PRIVATE = 0x63A2
 const ID_AUDIO = 0xE1
 const ID_SAMPLE_RATE = 0xB5
 const ID_CHANNELS = 0x9F
+const ID_BIT_DEPTH = 0x6264
 const ID_CODEC_DELAY = 0x56AA
 const ID_SEEK_PRE_ROLL = 0x56BB
 const ID_CLUSTER = 0x1F43B675
@@ -152,7 +155,7 @@ function parseWebm(buf) {
 
 			if (elemId === ID_TRACK_ENTRY) {
 				// Start a new track entry, then descend
-				curEntry = { number: 0, type: 0, codec: '', sampleRate: 48000, channels: 2, codecPrivate: null, codecDelay: 0, seekPreRoll: 0 }
+				curEntry = { number: 0, type: 0, codec: '', sampleRate: 48000, channels: 2, bitDepth: 0, codecPrivate: null, codecDelay: 0, seekPreRoll: 0 }
 				walk(dataOff, elemEnd)
 				if (!audioTrack && curEntry.type === 2 && curEntry.codec) audioTrack = curEntry
 				curEntry = null
@@ -168,6 +171,7 @@ function parseWebm(buf) {
 				else if (elemId === ID_CODEC_PRIVATE) curEntry.codecPrivate = b.slice(dataOff, dataOff + dataLen)
 				else if (elemId === ID_SAMPLE_RATE && dataLen > 0) curEntry.sampleRate = readFloat(b, dataOff, dataLen)
 				else if (elemId === ID_CHANNELS && dataLen > 0) curEntry.channels = readUint(b, dataOff, dataLen)
+				else if (elemId === ID_BIT_DEPTH && dataLen > 0) curEntry.bitDepth = readUint(b, dataOff, dataLen)
 				else if (elemId === ID_CODEC_DELAY && dataLen > 0) curEntry.codecDelay = readUint(b, dataOff, dataLen)
 				else if (elemId === ID_SEEK_PRE_ROLL && dataLen > 0) curEntry.seekPreRoll = readUint(b, dataOff, dataLen)
 			}
@@ -185,6 +189,7 @@ function parseWebm(buf) {
 		trackNum: audioTrack.number,
 		sampleRate: audioTrack.sampleRate,
 		channels: audioTrack.channels,
+		bitDepth: audioTrack.bitDepth,
 		codecPrivate: audioTrack.codecPrivate,
 		codecDelay: audioTrack.codecDelay,
 		seekPreRoll: audioTrack.seekPreRoll
@@ -309,8 +314,8 @@ export default async function decode(src) {
 	parseWebm(buf) // validate before streaming
 	let dec = await decoder()
 	try {
-		let result = dec.decode(buf)
-		let flushed = dec.flush()
+		let result = await dec.decode(buf)
+		let flushed = await dec.flush()
 		return merge(result, flushed)
 	} finally {
 		dec.free()
@@ -319,7 +324,7 @@ export default async function decode(src) {
 
 /**
  * Create streaming decoder instance
- * @returns {Promise<{decode(chunk: Uint8Array): AudioData, flush(): AudioData, free(): void}>}
+ * @returns {Promise<{decode(chunk: Uint8Array): AudioData | Promise<AudioData>, flush(): AudioData, free(): void}>}
  */
 export async function decoder() {
 	let prepared = await Promise.allSettled([createOpusDecoder(), createVorbisDecoder()])
@@ -330,7 +335,7 @@ export async function decoder() {
 	}
 	let [opus, vorbis] = prepared.map(result => result.value)
 	let freed = false
-	let codecDec = null, info = null
+	let codec = null, info = null, pending = null
 	let accum = [], accumLen = 0 // header parsing accumulator
 	let scanner = null
 
@@ -339,86 +344,167 @@ export async function decoder() {
 		vorbis?.free(); vorbis = null
 	}
 
+	let start = (adapter, buf) => {
+		codec = adapter
+		scanner = new EBMLScanner(info.trackNum)
+		let frames = scanner.feed(buf)
+		accum = []; accumLen = 0
+		return frames.length ? codec.feed(frames) : EMPTY
+	}
+
 	return {
 		decode(data) {
 			if (freed) throw Error('Decoder already freed')
 			if (!data) return EMPTY
 			let chunk = data instanceof Uint8Array ? data : new Uint8Array(data)
 			if (!chunk.length) return EMPTY
-
-			// Phase 1: parse header to get track info
-			if (!info) {
-				accum.push(chunk)
-				accumLen += chunk.length
-				let buf = accum.length === 1 ? accum[0] : concat(accum, accumLen)
-				try { info = parseWebm(buf) } catch {
-					if (accumLen < 8192) return EMPTY
-					throw Error('Not a WebM file')
-				}
-
-				if (info.codec === 'A_VORBIS') {
-					if (!info.codecPrivate && accumLen < 8192) { info = null; return EMPTY }
-					let headers = parseVorbisPrivate(info.codecPrivate)
-					if (!headers) throw Error('Invalid Vorbis CodecPrivate')
-					opus.free(); opus = null
-					codecDec = createVorbisStream(headers, vorbis); vorbis = null
-				} else if (info.codec === 'A_OPUS') {
-					if (!info.codecPrivate && accumLen < 8192) { info = null; return EMPTY }
-					let head = parseOpusHead(info.codecPrivate)
-					if (!head) throw Error('Invalid Opus CodecPrivate')
-					vorbis.free(); vorbis = null
-					codecDec = createOpusStream(info, head, opus); opus = null
-				} else {
-					freePrepared()
-					throw Error('Unsupported WebM codec: ' + info.codec)
-				}
-
-				scanner = new EBMLScanner(info.trackNum)
-				let frames = scanner.feed(buf)
-				accum = []; accumLen = 0
-
-				if (frames.length) {
-					if (info.codec === 'A_VORBIS') {
-						let ogg = framesToOgg(frames, codecDec.serial, codecDec.seq)
-						return normResult(codecDec.dec.decode(ogg))
-					}
-					return normResult(codecDec.dec.decodeFrames(frames))
-				}
-				return EMPTY
-			}
+			if (pending) return pending.then(() => this.decode(chunk))
 
 			// Phase 2: incremental scanning
-			let frames = scanner.feed(chunk)
-			if (!frames.length) return EMPTY
-			if (info.codec === 'A_VORBIS') {
-				let ogg = framesToOgg(frames, codecDec.serial, codecDec.seq)
-				return normResult(codecDec.dec.decode(ogg))
+			if (codec) {
+				let frames = scanner.feed(chunk)
+				return frames.length ? codec.feed(frames) : EMPTY
 			}
-			return normResult(codecDec.dec.decodeFrames(frames))
+
+			// Phase 1: parse header to get track info
+			accum.push(chunk)
+			accumLen += chunk.length
+			let buf = accum.length === 1 ? accum[0] : concat(accum, accumLen)
+			try { info = parseWebm(buf) } catch {
+				if (accumLen < 8192) return EMPTY
+				throw Error('Not a WebM file')
+			}
+
+			if (info.codec === 'A_VORBIS') {
+				if (!info.codecPrivate && accumLen < 8192) { info = null; return EMPTY }
+				let headers = parseVorbisPrivate(info.codecPrivate)
+				if (!headers) throw Error('Invalid Vorbis CodecPrivate')
+				opus.free(); opus = null
+				let v = vorbis; vorbis = null
+				return start(vorbisAdapter(createVorbisStream(headers, v)), buf)
+			}
+			if (info.codec === 'A_OPUS') {
+				if (!info.codecPrivate && accumLen < 8192) { info = null; return EMPTY }
+				let head = parseOpusHead(info.codecPrivate)
+				if (!head) throw Error('Invalid Opus CodecPrivate')
+				vorbis.free(); vorbis = null
+				let o = opus; opus = null
+				return start(opusAdapter(createOpusStream(info, head, o)), buf)
+			}
+
+			// Matroska-only codecs: release the bundled runtimes, load the codec package
+			freePrepared()
+			return pending = createMatroskaCodec(info).then(adapter => {
+				pending = null
+				if (freed) { adapter.free(); return EMPTY }
+				return start(adapter, buf)
+			})
 		},
 		flush() {
 			if (freed) return EMPTY
+			if (pending) return pending.then(() => this.flush())
 			freed = true; scanner = null
-
-			if (codecDec) {
-				try { return normResult(codecDec.dec.flush?.()) }
-				finally {
-					codecDec.dec.free?.()
-					codecDec = null
-				}
+			if (codec) {
+				try { return codec.flush() }
+				finally { codec.free(); codec = null }
 			}
-
 			freePrepared()
+			if (accumLen) throw Error(info ? 'Unsupported WebM codec: ' + info.codec : 'Not a WebM file')
 			return EMPTY
 		},
 		free() {
 			if (freed) return
 			freed = true
-			if (codecDec) { codecDec.dec.free?.(); codecDec = null }
+			if (codec) { codec.free(); codec = null }
 			else freePrepared()
 			scanner = null
 		}
 	}
+}
+
+// --- codec adapters: { feed(frames: Uint8Array[]) → AudioData, flush() → AudioData, free() } ---
+
+function opusAdapter({ dec }) {
+	return { feed: frames => normResult(dec.decodeFrames(frames)), flush: () => EMPTY, free: () => dec.free() }
+}
+
+function vorbisAdapter({ dec, serial, seq }) {
+	return {
+		feed: frames => normResult(dec.decode(framesToOgg(frames, serial, seq))),
+		flush: () => normResult(dec.flush?.()),
+		free: () => dec.free?.()
+	}
+}
+
+const UNSUPPORTED = { A_AC3: 'AC-3', A_EAC3: 'E-AC-3', A_DTS: 'DTS', A_TRUEHD: 'TrueHD', A_MLP: 'MLP', 'A_MS/ACM': 'MS/ACM', 'A_REAL/': 'RealAudio', A_QUICKTIME: 'QuickTime', A_WAVPACK4: 'WavPack', A_TTA1: 'TTA', 'A_MPEG/L2': 'MPEG-1 Layer II', 'A_MPEG/L1': 'MPEG-1 Layer I' }
+
+async function createMatroskaCodec(info) {
+	let { codec, codecPrivate } = info
+	if (codec.startsWith('A_AAC')) {
+		if (!codecPrivate) throw Error('Matroska AAC track has no CodecPrivate (AudioSpecificConfig)')
+		let dec = await (await import('@audio/decode-aac')).decoder({ asc: codecPrivate })
+		return { feed: frames => dec.decode(frames), flush: () => dec.flush(), free: () => dec.free() }
+	}
+	if (codec === 'A_ALAC') {
+		if (!codecPrivate) throw Error('Matroska ALAC track has no CodecPrivate (magic cookie)')
+		let dec = await (await import('@audio/decode-aac')).decoder({ alac: codecPrivate })
+		return { feed: frames => dec.decode(frames), flush: () => dec.flush(), free: () => dec.free() }
+	}
+	if (codec === 'A_MPEG/L3') {
+		let dec = await (await import('@audio/decode-mp3')).decoder()
+		return { feed: frames => dec.decode(concat(frames)), flush: () => dec.flush?.() ?? EMPTY, free: () => dec.free() }
+	}
+	if (codec === 'A_FLAC') {
+		if (!codecPrivate) throw Error('Matroska FLAC track has no CodecPrivate (stream header)')
+		let dec = await (await import('@audio/decode-flac')).decoder(), started = false
+		return {
+			feed: frames => { let bytes = concat(frames); if (!started) { started = true; bytes = concat([codecPrivate, bytes]) } return dec.decode(bytes) },
+			flush: () => started ? dec.flush() : EMPTY,
+			free: () => dec.free()
+		}
+	}
+	if (codec.startsWith('A_PCM/')) {
+		let bits = info.bitDepth || 16
+		return pcm({ channels: info.channels, sampleRate: Math.round(info.sampleRate), bits, float: codec === 'A_PCM/FLOAT/IEEE', be: codec === 'A_PCM/INT/BIG' })
+	}
+	let name = Object.keys(UNSUPPORTED).find(k => codec.startsWith(k))
+	throw Error('Unsupported WebM codec: ' + (name ? UNSUPPORTED[name] + ' (' + codec + ')' : codec))
+}
+
+// interleaved PCM → planar float. Keeps a partial frame between calls.
+function pcm({ channels, sampleRate, bits, float, be }) {
+	if (!channels || !sampleRate || !bits) throw Error('Invalid Matroska PCM track')
+	let bps = bits >> 3, frame = bps * channels, left = null
+	let read = reader(bits, float, be)
+	return {
+		feed(frames) {
+			let buf = left ? concat([left, ...frames]) : concat(frames)
+			let n = Math.floor(buf.length / frame)
+			left = n * frame < buf.length ? buf.slice(n * frame) : null
+			if (!n) return EMPTY
+			let dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength)
+			let channelData = Array.from({ length: channels }, () => new Float32Array(n))
+			for (let i = 0, off = 0; i < n; i++)
+				for (let c = 0; c < channels; c++, off += bps) channelData[c][i] = read(dv, off)
+			return { channelData, sampleRate }
+		},
+		flush: () => EMPTY,
+		free() { left = null }
+	}
+}
+
+function reader(bits, float, be) {
+	let le = !be
+	if (float) return bits === 64 ? (dv, o) => dv.getFloat64(o, le) : (dv, o) => dv.getFloat32(o, le)
+	switch (bits) {
+		case 8: return (dv, o) => (dv.getUint8(o) - 128) / 128
+		case 16: return (dv, o) => dv.getInt16(o, le) / 32768
+		case 24: return be
+			? (dv, o) => ((dv.getUint8(o) << 24 | dv.getUint8(o + 1) << 16 | dv.getUint8(o + 2) << 8) >> 8) / 8388608
+			: (dv, o) => ((dv.getUint8(o + 2) << 24 | dv.getUint8(o + 1) << 16 | dv.getUint8(o) << 8) >> 8) / 8388608
+		case 32: return (dv, o) => dv.getInt32(o, le) / 2147483648
+	}
+	throw Error('Unsupported PCM bit depth: ' + bits)
 }
 
 /**
@@ -450,13 +536,14 @@ class EBMLScanner {
 			if (id === ID_SEGMENT || id === ID_CLUSTER || id === ID_BLOCK_GROUP) { pos = dataOff; continue }
 			if (dataLen < 0) break // unknown-size non-master
 			if (dataOff + dataLen > buf.length) break // incomplete element
-			// SimpleBlock / Block: extract audio frame
+			// SimpleBlock / Block: extract the audio frame(s) — laced blocks carry several
 			if ((id === ID_SIMPLE_BLOCK || id === ID_BLOCK) && dataLen > 4) {
 				let bp = dataOff
 				let tn = readSize(buf, bp)
 				if (tn && tn.val === this.trackNum) {
+					let flags = buf[bp + tn.len + 2]
 					bp += tn.len + 3
-					if (bp < dataOff + dataLen) frames.push(buf.slice(bp, dataOff + dataLen))
+					if (bp < dataOff + dataLen) unlace(buf, bp, dataOff + dataLen, (flags >> 1) & 3, frames)
 				}
 			}
 			pos = dataOff + dataLen
@@ -493,7 +580,41 @@ function normResult(result) {
 	return { channelData, sampleRate }
 }
 
+/** Split a block payload into frames per its lacing mode: 0 none, 1 Xiph, 2 fixed, 3 EBML (Matroska §Block Lacing). */
+function unlace(buf, start, end, lacing, out) {
+	if (!lacing) { out.push(buf.slice(start, end)); return }
+	let n = buf[start] + 1, pos = start + 1, sizes = []
+	if (lacing === 1) {
+		for (let i = 0; i < n - 1; i++) {
+			let sz = 0
+			while (pos < end && buf[pos] === 255) { sz += 255; pos++ }
+			if (pos < end) sz += buf[pos++]
+			sizes.push(sz)
+		}
+	} else if (lacing === 3) {
+		let first = readSize(buf, pos)
+		if (!first) return
+		sizes.push(first.val); pos += first.len
+		for (let i = 1; i < n - 1; i++) {
+			let v = readSize(buf, pos)
+			if (!v) return
+			// signed delta: subtract the range bias for this VINT width
+			let delta = v.val - (2 ** (7 * v.len - 1) - 1)
+			sizes.push(sizes[i - 1] + delta); pos += v.len
+		}
+	} else if (lacing === 2) {
+		let each = Math.floor((end - pos) / n)
+		for (let i = 0; i < n - 1; i++) sizes.push(each)
+	}
+	for (let i = 0; i < n - 1; i++) {
+		if (sizes[i] < 0 || pos + sizes[i] > end) return
+		out.push(buf.slice(pos, pos + sizes[i])); pos += sizes[i]
+	}
+	if (pos < end) out.push(buf.slice(pos, end))
+}
+
 function concat(parts, totalLen) {
+	if (totalLen == null) { totalLen = 0; for (let c of parts) totalLen += c.length }
 	let buf = new Uint8Array(totalLen), off = 0
 	for (let c of parts) { buf.set(c, off); off += c.length }
 	return buf

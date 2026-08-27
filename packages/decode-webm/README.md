@@ -1,6 +1,6 @@
 # @audio/decode-webm
 
-Decode WebM Opus and Vorbis audio to PCM float samples.
+Decode WebM and Matroska (MKV) audio to PCM float samples — the audio track of video files included.
 
 ## Install
 
@@ -21,6 +21,8 @@ let tail = dec.flush()
 dec.free()
 ```
 
+Video tracks are skipped; the first audio track is decoded. Laced blocks (Xiph, EBML, fixed) are split into frames.
+
 ## API
 
 ### `decode(src): Promise<AudioData>`
@@ -29,14 +31,25 @@ Decode a complete `Uint8Array` or `ArrayBuffer`.
 
 ### `decoder(): Promise<WebmDecoder>`
 
-Initialize the codec runtimes and return a streaming decoder. Its `decode()` and `flush()` methods are synchronous. `flush()` ends the stream.
+Initialize the codec runtimes and return a streaming decoder. For the WebM codecs (Opus, Vorbis) `decode()` and `flush()` are synchronous. For Matroska-only codecs the call that completes the track header returns a Promise while the codec package loads; later calls are synchronous. `flush()` ends the stream.
 
-WebM identifies its audio codec in the EBML header. The factory prepares both runtimes, then releases the unused one after reading that header.
+The factory prepares the Opus and Vorbis runtimes, then releases what the track does not need once the header is read.
 
 ## Codecs
 
-- Opus uses the local libopus WASM core from `@audio/decode-opus`.
-- Vorbis uses `@audio/decode-vorbis`.
+| CodecID | Decoded by |
+|---|---|
+| `A_OPUS` | bundled libopus WASM core from [@audio/decode-opus](../decode-opus) |
+| `A_VORBIS` | bundled [@audio/decode-vorbis](../decode-vorbis) |
+| `A_AAC` (all profiles) | [@audio/decode-aac](../decode-aac), loaded on demand |
+| `A_ALAC` | [@audio/decode-aac](../decode-aac), loaded on demand |
+| `A_MPEG/L3` | [@audio/decode-mp3](../decode-mp3), loaded on demand |
+| `A_FLAC` | [@audio/decode-flac](../decode-flac), loaded on demand |
+| `A_PCM/INT/LIT`, `A_PCM/INT/BIG`, `A_PCM/FLOAT/IEEE` | built in |
+
+AC-3, E-AC-3, DTS, TrueHD, MPEG Layer I/II and `A_MS/ACM` tracks throw an error naming the codec.
+
+On-demand codec packages are imported dynamically, which is unavailable inside an AudioWorklet — Opus and Vorbis work there, the others need the main thread or a Worker.
 
 ## License
 

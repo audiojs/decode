@@ -52,7 +52,7 @@ Creates a decoder instance.
 
 ## Building WASM
 
-The WASM binary is prebuilt in `src/amr.wasm.cjs`. To rebuild:
+The WASM module is prebuilt in `src/amr.wasm.js`. To rebuild:
 
 ```
 npm run build

@@ -124,14 +124,17 @@ function fmt(name, init) {
 
 // --- codecs ---
 // dedupe (3rd arg): decoder upmixes mono sources to duplicate stereo (verified for mp3;
-// aac/wma flagged conservatively — same lossy-wasm family). Exact containers never dedupe.
+// aac/wma flagged conservatively — same lossy-wasm family). Exact containers never dedupe;
+// video containers that may carry AAC or MP3 (mp4/mov, mkv, avi) do.
 
 reg('mp3', () => import('@audio/decode-mp3'), true)
 reg('flac', () => import('@audio/decode-flac'))
 reg('opus', () => import('@audio/decode-opus'))
 reg('oga', () => import('@audio/decode-vorbis'))
 
-reg('m4a', () => import('@audio/decode-aac'), true)
+reg('m4a', () => import('@audio/decode-mp4'), true)
+reg('mp4', () => import('@audio/decode-mp4'), true)
+reg('mov', () => import('@audio/decode-mp4'), true)
 
 reg('wav', () => import('@audio/decode-wav'))
 reg('qoa', () => import('@audio/decode-qoa'))
@@ -140,6 +143,8 @@ reg('aac', () => import('@audio/decode-aac'), true)
 reg('aiff', () => import('@audio/decode-aiff'))
 reg('caf', () => import('@audio/decode-caf'))
 reg('webm', () => import('@audio/decode-webm'))
+reg('mkv', () => import('@audio/decode-webm'), true)
+reg('avi', () => import('@audio/decode-avi'), true)
 reg('amr', () => import('@audio/decode-amr'))
 reg('wma', () => import('@audio/decode-wma'), true)
 

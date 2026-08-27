@@ -1,0 +1,55 @@
+{
+  "name": "@audio/decode-mp4",
+  "version": "1.0.0",
+  "description": "Decode the audio track of MP4, MOV, M4A, M4V and 3GP files (AAC, ALAC, MP3, FLAC, Opus, AMR, PCM) to PCM samples",
+  "type": "module",
+  "main": "decode-mp4.js",
+  "types": "decode-mp4.d.ts",
+  "exports": {
+    ".": "./decode-mp4.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-mp4.js",
+    "decode-mp4.d.ts",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "@audio/decode-aac": "^1.5.0",
+    "@audio/decode-amr": "^1.3.0",
+    "@audio/decode-flac": "^1.3.0",
+    "@audio/decode-mp3": "^1.3.0",
+    "@audio/decode-opus": "^1.3.0"
+  },
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": ["mp4", "mov", "m4a", "m4v", "3gp", "quicktime", "isobmff", "demux", "video", "audio", "decode", "decoder", "aac", "alac", "pcm"],
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-mp4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-mp4"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

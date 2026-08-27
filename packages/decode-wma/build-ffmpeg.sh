@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build FFmpeg WMA decoder + glue -> wma.wasm
+# Build FFmpeg WMA decoder + glue -> wma.wasm.js
 #
 # Prerequisites:
 #   1. Emscripten SDK (emsdk) activated
@@ -22,7 +22,7 @@ if [ -z "$EMSDK_PYTHON" ]; then
 fi
 
 FFMPEG=lib/ffmpeg
-OUT=src/wma.wasm
+OUT=src/wma.wasm.js
 
 # Clone FFmpeg source if not present
 if [ ! -d "$FFMPEG" ]; then
@@ -93,19 +93,15 @@ emcc \
   -s INITIAL_MEMORY=4194304 \
   -s MAXIMUM_MEMORY=134217728 \
   -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
   -s EXPORT_NAME=createWMA \
-  -s ENVIRONMENT='web,node' \
+  -s ENVIRONMENT='web,worklet,shell' \
+  -s TEXTDECODER=1 \
   -s FILESYSTEM=0 \
   -s ASSERTIONS=0 \
   -s MALLOC=emmalloc \
   -s SINGLE_FILE=1 \
   --no-entry \
-  -o $OUT.cjs
+  -o "$OUT"
 
-# Avoid a static node:fs require so browser bundlers don't try to resolve it
-perl -0pi -e 's/var fs=require\("node:fs"\);/var _nfs="node:"+"fs";var fs=require(_nfs);/' $OUT.cjs
-
-# Append CJS export
-echo "if(typeof module!=='undefined')module.exports=createWMA;" >> $OUT.cjs
-
-echo "Built: $(wc -c < $OUT.cjs) bytes"
+echo "Built: $(wc -c < "$OUT") bytes"

@@ -25,6 +25,7 @@ emcmake cmake -S "$LIB" -B "$BUILD" \
   -DOPUS_OSCE=OFF
 cmake --build "$BUILD" --target opus -j4
 
+# Single-file WASM uses no host I/O. Omitting Emscripten's Node loader keeps the module graph host-neutral.
 emcc \
   src/opus_glue.c "$BUILD/libopus.a" \
   -I "$LIB/include" \
@@ -43,7 +44,8 @@ emcc \
   -s MODULARIZE=1 \
   -s EXPORT_ES6=1 \
   -s EXPORT_NAME=createOpus \
-  -s ENVIRONMENT='web,node' \
+  -s ENVIRONMENT='web,worklet,shell' \
+  -s TEXTDECODER=1 \
   -s FILESYSTEM=0 \
   -s ASSERTIONS=0 \
   -s MALLOC=emmalloc \

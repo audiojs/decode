@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build RockBox fixed-point WMA decoder -> wma.wasm
+# Build RockBox fixed-point WMA decoder -> wma.wasm.js
 #
 # Uses xOpenLee/wmaDecode standalone extraction of RockBox's WMA decoder.
 # Only supports WMAv1 (0x0160) and WMAv2 (0x0161) — no Pro/Lossless.
@@ -17,14 +17,19 @@ if [ -z "$EMSDK_PYTHON" ]; then
   done
 fi
 
-OUT=src/wma.wasm
+OUT=src/wma.wasm.js
 
-# Patch wmadeci.c typedefs that conflict with stdint.h (char vs signed char)
+# Patch typedefs that conflict with stdint.h and remove conversion-helper debug prints.
 PATCHED=src/_wmadeci_patched.c
-sed 's/^typedef .*int[0-9]*_t;//' lib/rockbox-wma/wmadeci.c > "$PATCHED"
+sed \
+  -e 's/^typedef .*int[0-9]*_t;//' \
+  -e '/print_fixed64(res);/d' \
+  -e '/print_fixed32(res);/d' \
+  lib/rockbox-wma/wmadeci.c > "$PATCHED"
 trap "rm -f $PATCHED" EXIT
 
 echo "Compiling RockBox WMA WASM module..."
+# Single-file WASM uses no host I/O. Omitting Emscripten's Node loader keeps the module graph host-neutral.
 emcc \
   src/wma_glue.c \
   -I lib/rockbox-wma \
@@ -44,19 +49,15 @@ emcc \
   -s INITIAL_MEMORY=4194304 \
   -s MAXIMUM_MEMORY=134217728 \
   -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
   -s EXPORT_NAME=createWMA \
-  -s ENVIRONMENT='web,node' \
+  -s ENVIRONMENT='web,worklet,shell' \
+  -s TEXTDECODER=1 \
   -s FILESYSTEM=0 \
   -s ASSERTIONS=0 \
   -s MALLOC=emmalloc \
   -s SINGLE_FILE=1 \
   --no-entry \
-  -o $OUT.cjs
+  -o "$OUT"
 
-# Avoid a static node:fs require so browser bundlers don't try to resolve it
-perl -0pi -e 's/var fs=require\("node:fs"\);/var _nfs="node:"+"fs";var fs=require(_nfs);/' $OUT.cjs
-
-# Append CJS export
-echo "if(typeof module!=='undefined')module.exports=createWMA;" >> $OUT.cjs
-
-echo "Built: $(wc -c < $OUT.cjs) bytes"
+echo "Built: $(wc -c < "$OUT") bytes"

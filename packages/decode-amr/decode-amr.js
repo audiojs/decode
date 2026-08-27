@@ -5,22 +5,13 @@
  * let { channelData, sampleRate } = await decode(amrbuf)
  */
 
+import createAMR from './src/amr.wasm.js'
+
 let _modP
 
 async function getMod() {
 	if (_modP) return _modP
-	let p = (async () => {
-		let createAMR
-		if (typeof process !== 'undefined' && process.versions?.node) {
-			let m = 'module'
-			let { createRequire } = await import(m)
-			createAMR = createRequire(import.meta.url)('./src/amr.wasm.cjs')
-		} else {
-			let mod = await import('./src/amr.wasm.cjs')
-			createAMR = mod.default || mod
-		}
-		return createAMR()
-	})()
+	let p = createAMR()
 	_modP = p
 	try { return await p }
 	catch (e) { _modP = null; throw e }

@@ -24,8 +24,17 @@ async function readFile(url) {
 const qoa = await readFile(new URL('./fixtures/qoa-sample.qoa', import.meta.url))
 const shortOgg = await readFile(new URL('./packages/decode-vorbis/fixtures/short.ogg', import.meta.url))
 const shortOggFlac = await readFile(new URL('./packages/decode-flac/fixtures/mono.oga', import.meta.url))
-const amrNb = isNode ? await readFile(new URL('./packages/decode-amr/fixtures/test-nb.amr', import.meta.url)) : null
-const wmaStereo = isNode ? await readFile(new URL('./packages/decode-wma/fixtures/stereo.wma', import.meta.url)) : null
+const amrNb = await readFile(new URL('./packages/decode-amr/fixtures/test-nb.amr', import.meta.url))
+const amrWb = await readFile(new URL('./packages/decode-amr/fixtures/test-wb.amr', import.meta.url))
+const webmVorbis = await readFile(new URL('./node_modules/audio-lena/lena-vorbis.webm', import.meta.url))
+const alacMono = await readFile(new URL('./packages/decode-aac/fixtures/alac_mono.m4a', import.meta.url))
+const wmaMono = await readFile(new URL('./packages/decode-wma/fixtures/mono.wma', import.meta.url))
+const wmaStereo = await readFile(new URL('./packages/decode-wma/fixtures/stereo.wma', import.meta.url))
+const videoMp4 = await readFile(new URL('./packages/decode-mp4/fixtures/video-aac.mp4', import.meta.url))
+const videoMov = await readFile(new URL('./packages/decode-mp4/fixtures/video-pcm16.mov', import.meta.url))
+const videoMkv = await readFile(new URL('./packages/decode-webm/fixtures/video-aac.mkv', import.meta.url))
+const videoWebm = await readFile(new URL('./packages/decode-webm/fixtures/video-opus.webm', import.meta.url))
+const videoAvi = await readFile(new URL('./packages/decode-avi/fixtures/video-mp3.avi', import.meta.url))
 
 const dur = r => r.channelData[0].length / r.sampleRate
 const rms = f32 => { let s = 0; for (let i = 0; i < f32.length; i++) s += f32[i] * f32[i]; return Math.sqrt(s / f32.length) }
@@ -113,7 +122,6 @@ t('opus', async () => {
 })
 
 t('m4a', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let r = await decode(m4a)
 	is(r.channelData.length, 2)
 	is(r.sampleRate, 44100)
@@ -122,7 +130,6 @@ t('m4a', async () => {
 })
 
 t('alac (Apple Lossless) m4a', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	// auto-detected as m4a, routed to the pure-JS ALAC decoder
 	let mono = await readFile(new URL('./packages/decode-aac/fixtures/alac_mono.m4a', import.meta.url))
 	let r = await decode(mono)
@@ -135,7 +142,6 @@ t('alac (Apple Lossless) m4a', async () => {
 })
 
 t('m4a iPhone voice memo', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let hk = await readFile(new URL('./fixtures/hk.m4a', import.meta.url))
 	let r = await decode(hk)
 	is(r.channelData.length, 1)
@@ -196,15 +202,32 @@ t('response input', async () => {
 	is(near(dur(r), 12.27), true)
 })
 
+const workletAudio = (channels, samples, sampleRate, active = true) =>
+	({ sync: true, channels, samples, sampleRate, finite: true, active })
 const workletPCM = {
-	flacA: { channels: 1, samples: 12000, sampleRate: 48000, finite: true, active: true },
-	flacB: { channels: 1, samples: 541184, sampleRate: 44100, finite: true, active: true },
-	vorbisA: { channels: 2, samples: 13248, sampleRate: 44100, finite: true, active: true },
-	vorbisB: { channels: 1, samples: 541184, sampleRate: 44100, finite: true, active: true },
-	mp3: { channels: 2, samples: 541184, sampleRate: 44100, finite: true, active: true },
-	wav: { channels: 1, samples: 541184, sampleRate: 44100, finite: true, active: true },
+	flacA: workletAudio(1, 12000, 48000),
+	flacB: workletAudio(1, 541184, 44100),
+	vorbisA: workletAudio(2, 13248, 44100),
+	vorbisB: workletAudio(1, 541184, 44100),
+	mp3: workletAudio(2, 541184, 44100),
+	opusBody: workletAudio(1, 575688, 48000),
+	opusTail: workletAudio(1, 13356, 48000),
+	webmOpus: workletAudio(1, 589128, 48000),
+	webmVorbisBody: workletAudio(1, 432064, 44100),
+	webmVorbisTail: workletAudio(1, 110080, 44100),
+	aac: workletAudio(1, 542720, 44100),
+	m4a: workletAudio(2, 541696, 44100),
+	alac: workletAudio(1, 22050, 44100),
+	amrNb: workletAudio(1, 8000, 8000, false),
+	amrWb: workletAudio(1, 16000, 16000),
+	wmaMono: workletAudio(1, 45056, 44100),
+	wmaStereo: workletAudio(2, 45056, 44100),
+	wav: workletAudio(1, 541184, 44100),
+	aiff: workletAudio(1, 542144, 44100),
+	caf: workletAudio(1, 541184, 44100),
+	qoa: workletAudio(1, 39431, 48000),
 }
-const workletEmpty = { sync: true, channels: 0, samples: 0, sampleRate: 0, finite: true, active: false }
+const workletEmpty = workletAudio(0, 0, 0, false)
 
 // Chromium and Firefox AudioWorkletGlobalScope omit these browser globals.
 t('worklet-like scope', async () => {
@@ -237,7 +260,10 @@ t('worklet-like scope', async () => {
 		console.log(JSON.stringify(out))
 	`
 	let report = JSON.parse(execFileSync(process.execPath, ['--input-type=module', '-e', script], { cwd: new URL('.', import.meta.url).pathname, encoding: 'utf8' }))
-	for (let name of ['flacA', 'vorbisA', 'mp3']) is(report[name], workletPCM[name], name)
+	for (let name of ['flacA', 'vorbisA', 'mp3']) {
+		let { sync, ...expected } = workletPCM[name]
+		is(report[name], expected, name)
+	}
 })
 
 t('worklet bundles omit worker runtime', async () => {
@@ -249,24 +275,102 @@ t('worklet bundles omit worker runtime', async () => {
 	}
 })
 
+t('worklet WASM loaders are static ES modules', async () => {
+	if (!isNode) return skip('generated loader check runs in Node')
+	// codec packages may import sibling @audio/decode-* packages on demand; WASM itself must load statically
+	let dynamicLoader = /\bimport\s*\(\s*(?!['"]@audio\/decode-)|node:module|\.wasm\.cjs/
+	let paths = [
+		'decode-opus/core.js', 'decode-opus/src/opus.wasm.js',
+		'decode-webm/decode-webm.js', 'decode-webm/src/opus.wasm.js',
+		'decode-aac/decode-aac.js', 'decode-aac/src/aac.wasm.js',
+		'decode-amr/decode-amr.js', 'decode-amr/src/amr.wasm.js',
+		'decode-wma/decode-wma.js', 'decode-wma/src/wma.wasm.js',
+	]
+	for (let path of paths) {
+		let source = String(await readFile(new URL('./packages/' + path, import.meta.url)))
+		is(dynamicLoader.test(source), false, path)
+	}
+	for (let name of ['opus', 'aac', 'amr', 'wma']) {
+		let source = String(await readFile(new URL(`./packages/decode-${name}/src/${name}.wasm.js`, import.meta.url)))
+		is(source.includes('ENVIRONMENT_IS_AUDIO_WORKLET'), true, name + ' worklet target')
+	}
+	for (let path of ['decode-opus/build.sh', 'decode-aac/build.sh', 'decode-amr/build.sh', 'decode-wma/build.sh', 'decode-wma/build-ffmpeg.sh']) {
+		let source = String(await readFile(new URL('./packages/' + path, import.meta.url)))
+		let staticWorklet = !source.includes('.cjs') && source.includes('-s EXPORT_ES6=1') &&
+			source.includes("-s ENVIRONMENT='web,worklet,shell'") && source.includes('-s SINGLE_FILE=1')
+		is(staticWorklet, true, path)
+	}
+})
+
+t('umbrella browser bundle', async () => {
+	if (!isNode) return skip('esbuild runs in Node')
+	let { build } = await import('esbuild')
+	let result = await build({
+		entryPoints: [new URL('./audio-decode.js', import.meta.url).pathname],
+		bundle: true,
+		splitting: true,
+		format: 'esm',
+		platform: 'browser',
+		target: 'es2022',
+		outdir: 'out',
+		write: false,
+		logLevel: 'silent',
+	})
+	is(result.outputFiles.length > 1, true, 'entry and lazy codec chunks')
+})
+
 t('audio worklet scope', async () => {
 	if (isNode || typeof OfflineAudioContext === 'undefined') return skip('browser only')
-	let fixtures = { flacA: shortOggFlac, flacB: flac, vorbisA: shortOgg, vorbisB: ogg, mp3, wav }
+	let fixtures = {
+		flacA: shortOggFlac, flacB: flac, vorbisA: shortOgg, vorbisB: ogg,
+		mp3, opus, webmOpus: webm, webmVorbis, aac, m4a, alac: alacMono, amrNb, amrWb,
+		wmaMono, wmaStereo, wav, aiff, caf, qoa,
+	}
 	let ctx = new OfflineAudioContext(1, 128, 44100)
 	await ctx.audioWorklet.addModule('./test.worklet.js')
 	let node = new AudioWorkletNode(ctx, 'decode-test', { processorOptions: fixtures })
 	let report = await new Promise(resolve => {
-		let timer = setTimeout(() => resolve({ error: 'AudioWorklet timeout' }), 15000)
+		let timer = setTimeout(() => resolve({ error: 'AudioWorklet timeout' }), 30000)
 		let done = value => { clearTimeout(timer); resolve(value) }
 		node.port.onmessage = event => done(event.data)
 		node.onprocessorerror = () => done({ error: 'AudioWorklet processor error' })
 	})
 	is(report.error, undefined, 'no error')
 	is(report.globals, Object.fromEntries(['Blob', 'TextDecoder', 'atob', 'Worker', 'URL', 'fetch', 'performance', 'setTimeout'].map(name => [name, 'undefined'])), 'restricted globals')
-	is(report.flac, [workletEmpty, workletEmpty, { sync: true, ...workletPCM.flacA }, { sync: true, ...workletPCM.flacA }, { sync: true, ...workletPCM.flacB }], 'FLAC null → empty → compact Ogg A → A → raw B')
-	is(report.vorbis, [workletEmpty, workletEmpty, { sync: true, ...workletPCM.vorbisA }, { sync: true, ...workletPCM.vorbisA }, { sync: true, ...workletPCM.vorbisB }], 'Vorbis null → empty → compact stereo A → A → full mono B')
-	is(report.mp3, [workletEmpty, workletEmpty, { sync: true, ...workletPCM.mp3 }], 'MP3 null → empty → full MPEG stream')
-	is(report.wav, { sync: true, ...workletPCM.wav }, 'full RIFF/WAVE file')
+	is(report.flac, [workletEmpty, workletEmpty, workletPCM.flacA, workletPCM.flacA, workletPCM.flacB], 'FLAC null → empty → compact Ogg A → A → raw B')
+	is(report.vorbis, [workletEmpty, workletEmpty, workletPCM.vorbisA, workletPCM.vorbisA, workletPCM.vorbisB], 'Vorbis null → empty → compact stereo A → A → full mono B')
+	is(report.mp3, [workletEmpty, workletEmpty, workletPCM.mp3], 'MP3 null → empty → full MPEG stream')
+	is(report.opus, [workletEmpty, workletEmpty, workletPCM.opusBody, workletPCM.opusTail], 'Opus null → empty → Ogg body → flush tail')
+	is(report.webmOpus, [workletEmpty, workletEmpty, workletPCM.webmOpus, workletEmpty], 'WebM Opus null → empty → file → flush')
+	is(report.webmVorbis, [workletEmpty, workletEmpty, workletPCM.webmVorbisBody, workletPCM.webmVorbisTail], 'WebM Vorbis null → empty → body → flush tail')
+	is(report.aac, [workletEmpty, workletEmpty, workletPCM.aac, workletEmpty], 'AAC null → empty → ADTS → flush')
+	is(report.m4a, [workletEmpty, workletEmpty, workletPCM.m4a, workletEmpty], 'AAC null → empty → M4A → flush')
+	is(report.alac, [workletEmpty, workletEmpty, workletPCM.alac, workletEmpty], 'ALAC null → empty → M4A → flush')
+	is(report.amrNb, [workletEmpty, workletEmpty, workletPCM.amrNb, workletEmpty], 'AMR-NB null → empty → silent file → flush')
+	is(report.amrWb, [workletEmpty, workletEmpty, workletPCM.amrWb, workletEmpty], 'AMR-WB null → empty → file → flush')
+	is(report.wmaMono, [workletEmpty, workletEmpty, workletPCM.wmaMono, workletEmpty], 'WMA mono null → empty → file → flush')
+	is(report.wmaStereo, [workletEmpty, workletEmpty, workletPCM.wmaStereo, workletEmpty], 'WMA stereo null → empty → file → flush')
+	is(report.splits.opus, [workletPCM.opusBody, workletEmpty, workletPCM.opusTail], 'Opus split before final byte → flush tail')
+	is(report.splits.aac, [workletAudio(1, 541696, 44100), workletAudio(1, 1024, 44100), workletEmpty], 'AAC split before final byte → final frame')
+	is(report.splits.amrNb, [workletAudio(1, 7840, 8000, false), workletAudio(1, 160, 8000, false), workletEmpty], 'AMR-NB split before final byte → final frame')
+	is(report.splits.wmaMono, [workletAudio(1, 32768, 44100), workletAudio(1, 12288, 44100), workletEmpty], 'WMA split before final byte → final packet')
+	let whole = {
+		flac: workletPCM.flacB,
+		vorbis: workletPCM.vorbisB,
+		mp3: workletPCM.mp3,
+		opus: workletAudio(1, 589044, 48000),
+		webmOpus: workletPCM.webmOpus,
+		webmVorbis: workletAudio(1, 542144, 44100),
+		aac: workletPCM.aac,
+		m4a: workletPCM.m4a,
+		alac: workletPCM.alac,
+		amrNb: workletPCM.amrNb,
+		amrWb: workletPCM.amrWb,
+		wmaMono: workletPCM.wmaMono,
+		wmaStereo: workletPCM.wmaStereo,
+	}
+	for (let [name, expected] of Object.entries(whole)) is(report.whole[name], { promised: true, ...expected }, name + ' whole-file export')
+	for (let name of ['wav', 'aiff', 'caf', 'qoa']) is(report[name], workletPCM[name], name)
 })
 
 // -- streaming via decoders --
@@ -309,7 +413,6 @@ t('stream oga', async () => {
 })
 
 t('stream m4a', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let dec = await decode.m4a()
 	let r = await dec(new Uint8Array(m4a))
 	is(r.channelData.length > 0, true)
@@ -342,7 +445,6 @@ t('stream webm', async () => {
 })
 
 t('stream aac', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let dec = await decode.aac()
 	let r = await dec(new Uint8Array(aac))
 	is(r.channelData[0].length > 0, true)
@@ -350,7 +452,6 @@ t('stream aac', async () => {
 })
 
 t('stream amr', async () => {
-	if (!isNode) return skip('amr wasm is cjs')
 	let dec = await decode.amr()
 	let r = await dec(new Uint8Array(amrNb))
 	is(r.channelData[0].length > 0, true)
@@ -358,7 +459,6 @@ t('stream amr', async () => {
 })
 
 t('stream wma', async () => {
-	if (!isNode) return skip('wma wasm is cjs')
 	let dec = await decode.wma()
 	let r = await dec(new Uint8Array(wmaStereo))
 	is(r.channelData[0].length > 0, true)
@@ -502,7 +602,6 @@ t('decode ReadableStream', async () => {
 })
 
 t('decode m4a', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	async function* gen() { yield new Uint8Array(m4a) }
 	let total = 0
 	for await (let r of decode(gen(), 'm4a')) {
@@ -513,7 +612,6 @@ t('decode m4a', async () => {
 })
 
 t('decode m4a chunked', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	// M4A needs full file (moov atom), so chunked streaming must buffer until flush
 	let buf = new Uint8Array(m4a), chunkSize = 16384
 	async function* gen() {
@@ -570,7 +668,6 @@ t('mono mp3 decoded as 1 channel', async () => {
 })
 
 t('stereo m4a decoded as 2 channels', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let r = await decode(m4a)
 	is(r.channelData.length, 2, 'stereo m4a returns 2 channels')
 })
@@ -683,7 +780,6 @@ t('chunked stream webm', async () => {
 })
 
 t('chunked stream m4a', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let ref = await decode(m4a)
 	let { total, sr } = await streamTotal(chunked(m4a, 16384), 'm4a')
 	is(sr, 44100)
@@ -691,7 +787,6 @@ t('chunked stream m4a', async () => {
 })
 
 t('chunked stream aac', async () => {
-	if (!isNode) return skip('aac wasm is cjs')
 	let ref = await decode(aac)
 	let { total, sr } = await streamTotal(chunked(aac, 4096), 'aac')
 	is(sr, ref.sampleRate)
@@ -699,7 +794,6 @@ t('chunked stream aac', async () => {
 })
 
 t('chunked stream amr', async () => {
-	if (!isNode) return skip('amr wasm is cjs')
 	let ref = await decode(amrNb)
 	let { total, sr } = await streamTotal(chunked(amrNb, 1024), 'amr')
 	is(sr, 8000)
@@ -707,7 +801,6 @@ t('chunked stream amr', async () => {
 })
 
 t('chunked stream wma', async () => {
-	if (!isNode) return skip('wma wasm is cjs')
 	let ref = await decode(wmaStereo)
 	let { total, sr } = await streamTotal(chunked(wmaStereo, 8192), 'wma')
 	is(sr, ref.sampleRate)
@@ -743,4 +836,27 @@ t('meta: oga + opus + m4a tags', async () => {
 	is(m.meta.title, 'Lena Sine', 'm4a title')
 	is(m.meta.track, '3', 'm4a track')
 	is(m.meta.pictures.length, 1, 'm4a cover art')
+})
+
+// -- video containers: the audio track is decoded, the video track skipped --
+
+t('video containers: mp4, mov, mkv, webm, avi', async () => {
+	for (let [name, bytes] of [['mp4', videoMp4], ['mov', videoMov], ['mkv', videoMkv], ['webm', videoWebm], ['avi', videoAvi]]) {
+		let r = await decode(bytes)
+		is(r.channelData.length, 2, name + ' stereo')
+		is(r.sampleRate, 48000, name + ' rate')
+		is(near(dur(r), 0.5, 0.06), true, name + ' duration ' + dur(r).toFixed(3))
+		let mid = r.channelData[0].subarray(4000, 20000) // clear of codec priming / padding
+		is(near(rms(mid), 0.354, 0.02), true, name + ' rms ' + rms(mid).toFixed(3)) // 0.5-amplitude sine
+	}
+})
+
+t('chunked stream mp4 / mkv / avi', async () => {
+	for (let [fmt, bytes] of [['mp4', videoMp4], ['mkv', videoMkv], ['avi', videoAvi]]) {
+		let chunks = []
+		for (let i = 0; i < bytes.length; i += 1500) chunks.push(bytes.subarray(i, i + 1500))
+		let whole = await decode(bytes), total = 0
+		for await (let r of decode(chunks, fmt)) total += r.channelData[0].length
+		is(total, whole.channelData[0].length, fmt + ' chunked equals whole')
+	}
 })

@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-amr",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Decode AMR-NB/WB audio via opencore-amr WASM",
   "type": "module",
   "main": "decode-amr.js",
@@ -21,7 +21,7 @@
   "files": [
     "decode-amr.js",
     "decode-amr.d.ts",
-    "src/amr.wasm.cjs",
+    "src/amr.wasm.js",
     "LICENSE",
     "audio.js",
     "audio.d.ts"

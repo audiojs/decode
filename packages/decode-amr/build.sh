@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build opencore-amr + glue -> amr.wasm
+# Build opencore-amr + glue -> amr.wasm.js
 set -e
 
 # Download opencore-amr source if not present
@@ -33,7 +33,7 @@ if [ -z "$EMSDK_PYTHON" ]; then
 fi
 
 LIB=lib/opencore-amr
-OUT=src/amr.wasm
+OUT=src/amr.wasm.js
 
 # read opencore-amr version from source of truth
 AMR_VERSION=$($EMSDK_PYTHON -c "import json; print(json.load(open('$LIB/properties.json'))['PACKAGE_VERSION'])" 2>/dev/null \
@@ -201,6 +201,7 @@ INCS="
   -I $OC/common/dec/include
 "
 
+# Single-file WASM uses no host I/O. Omitting Emscripten's Node loader keeps the module graph host-neutral.
 emcc \
   $NB_DEC_SRCS \
   $NB_COMMON_SRCS \
@@ -225,19 +226,15 @@ emcc \
   -s INITIAL_MEMORY=1048576 \
   -s MAXIMUM_MEMORY=16777216 \
   -s MODULARIZE=1 \
+  -s EXPORT_ES6=1 \
   -s EXPORT_NAME=createAMR \
-  -s ENVIRONMENT='web,node' \
+  -s ENVIRONMENT='web,worklet,shell' \
+  -s TEXTDECODER=1 \
   -s FILESYSTEM=0 \
   -s ASSERTIONS=0 \
   -s MALLOC=emmalloc \
   -s SINGLE_FILE=1 \
   --no-entry \
-  -o $OUT.cjs
+  -o "$OUT"
 
-# Avoid a static node:fs require so browser bundlers don't try to resolve it.
-perl -0pi -e 's/var fs=require\("node:fs"\);/var _nfs="node:"+"fs";var fs=require(_nfs);/' $OUT.cjs
-
-# append CJS export
-echo "if(typeof module!=='undefined')module.exports=createAMR;" >> $OUT.cjs
-
-echo "Built: $(wc -c < $OUT.cjs) bytes (opencore-amr $AMR_VERSION)"
+echo "Built: $(wc -c < "$OUT") bytes (opencore-amr $AMR_VERSION)"
