@@ -1,0 +1,64 @@
+{
+  "name": "@audio/decode-dts",
+  "version": "1.0.0",
+  "description": "Decode DTS (DTS Coherent Acoustics core) audio with libdca WASM",
+  "type": "module",
+  "main": "decode-dts.js",
+  "types": "decode-dts.d.ts",
+  "exports": {
+    ".": "./decode-dts.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-dts.js",
+    "decode-dts.d.ts",
+    "src/dts.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.libdca"
+  ],
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "dts",
+    "dts",
+    "dca",
+    "coherent acoustics",
+    "surround",
+    "5.1",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "libdca"
+  ],
+  "license": "GPL-2.0-or-later",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-dts",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-dts"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

@@ -20,7 +20,7 @@ function snr(src, out, maxLag = 3000) {
 }
 const exact = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-4) return false; return true }
 
-const lossy = ['video-aac.mp4', 'video-aac.mov', 'video-aac.3gp', 'video-mp3.mp4', 'video-opus.mp4']
+const lossy = ['video-aac.mp4', 'video-aac.mov', 'video-aac.3gp', 'video-mp3.mp4', 'video-opus.mp4', 'video-ac3.mp4', 'video-dts.mp4']
 const lossless = ['video-flac.mp4', 'video-alac.mov', 'video-pcm16.mov', 'video-pcm16be.mov', 'video-pcm24.mov', 'video-f32.mov', 'video-pcm16.mp4']
 
 for (let name of lossy) t(name + ' — audio track from video, lossy', async () => {
@@ -42,8 +42,8 @@ for (let name of lossless) t(name + ' — audio track from video, bit-exact', as
 
 t('unsupported codec names itself', async () => {
 	let err
-	try { await decode(fx('video-ac3.mp4')) } catch (e) { err = e }
-	ok(err && /AC-3/.test(err.message), err?.message)
+	try { await decode(fx('video-eac3.mp4')) } catch (e) { err = e }
+	ok(err && /E-AC-3/.test(err.message), err?.message)
 })
 
 t('streaming: chunks equal whole-file (moov after mdat, 1000-byte chunks)', async () => {

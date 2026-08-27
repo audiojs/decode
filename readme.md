@@ -28,6 +28,8 @@ const { channelData, sampleRate } = await decode(anyAudioBuffer);
 | CAF | [@audio/decode-caf](./packages/decode-caf) | 9 KB | JS |
 | WebM / MKV video | [@audio/decode-webm](./packages/decode-webm) | 250 KB | WASM |
 | AVI video | [@audio/decode-avi](./packages/decode-avi) | 8 KB + codec | JS demux |
+| AC-3 | [@audio/decode-ac3](./packages/decode-ac3) | 43 KB | WASM |
+| DTS | [@audio/decode-dts](./packages/decode-dts) | 200 KB | WASM |
 | AMR | [@audio/decode-amr](./packages/decode-amr) | 241 KB | WASM |
 | WMA | [@audio/decode-wma](./packages/decode-wma) | 91 KB | WASM |
 
@@ -65,7 +67,7 @@ for await (let { channelData, sampleRate } of decode.mp3(response.body)) {
 
 Works with `ReadableStream`, `fetch` body, Node stream, or any async iterable.
 
-Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `mp4`, `mov`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `mkv`, `avi`, `amr`, `wma`.
+Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `mp4`, `mov`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `mkv`, `avi`, `ac3`, `dts`, `amr`, `wma`.
 
 ### Video files
 
@@ -77,11 +79,11 @@ let { channelData, sampleRate } = await decode(await fetch('trailer.mp4'))
 
 | Container | Package | Audio codecs |
 |---|---|---|
-| MP4, MOV, M4V, 3GP | [@audio/decode-mp4](./packages/decode-mp4) | AAC, ALAC, MP3, FLAC, Opus, AMR, PCM, G.711 |
-| WebM, MKV | [@audio/decode-webm](./packages/decode-webm) | Opus, Vorbis, AAC, ALAC, MP3, FLAC, PCM |
-| AVI | [@audio/decode-avi](./packages/decode-avi) | PCM, MP3, AAC, G.711 |
+| MP4, MOV, M4V, 3GP | [@audio/decode-mp4](./packages/decode-mp4) | AAC, ALAC, MP3, FLAC, Opus, AC-3, DTS, AMR, PCM, G.711 |
+| WebM, MKV | [@audio/decode-webm](./packages/decode-webm) | Opus, Vorbis, AAC, ALAC, MP3, FLAC, AC-3, DTS, PCM |
+| AVI | [@audio/decode-avi](./packages/decode-avi) | PCM, MP3, AAC, AC-3, DTS, G.711 |
 
-AC-3, E-AC-3 and DTS tracks throw an error naming the codec.
+Surround tracks keep their layout (up to 5.1, WAV channel order). E-AC-3 and TrueHD tracks throw an error naming the codec.
 
 ### Browser
 
@@ -175,6 +177,6 @@ worker.onmessage = ({ data }) => { /* { channelData, sampleRate } */ }
 
 ## Licensing
 
-The umbrella and most codec packages are MIT. Three codecs use another license: <a href="./packages/decode-aac">@audio/decode-aac</a> GPL-2.0, <a href="./packages/decode-wma">@audio/decode-wma</a> GPL-2.0-or-later, and <a href="./packages/decode-amr">@audio/decode-amr</a> Apache-2.0. Install only the codecs whose licenses fit your project. The umbrella loads them on demand.
+The umbrella and most codec packages are MIT. Five codecs use another license: <a href="./packages/decode-aac">@audio/decode-aac</a> GPL-2.0, <a href="./packages/decode-wma">@audio/decode-wma</a>, <a href="./packages/decode-ac3">@audio/decode-ac3</a> and <a href="./packages/decode-dts">@audio/decode-dts</a> GPL-2.0-or-later, and <a href="./packages/decode-amr">@audio/decode-amr</a> Apache-2.0. Install only the codecs whose licenses fit your project. The umbrella loads them on demand.
 
 <p align="center"><a href="https://github.com/krishnized/license/">ॐ</a> · <a href="./LICENSE">MIT</a>

@@ -10,3 +10,9 @@
 [submodule "packages/decode-opus/lib/opus"]
 	path = packages/decode-opus/lib/opus
 	url = https://github.com/xiph/opus.git
+[submodule "packages/decode-ac3/lib/liba52"]
+	path = packages/decode-ac3/lib/liba52
+	url = https://code.videolan.org/videolan/liba52.git
+[submodule "packages/decode-dts/lib/libdca"]
+	path = packages/decode-dts/lib/libdca
+	url = https://code.videolan.org/videolan/libdca.git

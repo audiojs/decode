@@ -1,5 +1,5 @@
 /**
- * WebM / Matroska audio decoder — Opus, Vorbis, AAC, MP3, FLAC, ALAC, PCM
+ * WebM / Matroska audio decoder — Opus, Vorbis, AAC, MP3, FLAC, ALAC, PCM, AC-3, DTS
  * Opus and Vorbis (the WebM codecs) are bundled and decode synchronously; the Matroska-only codecs
  * load their package on the chunk that completes the track header, where decode() returns a Promise.
  *
@@ -31,6 +31,7 @@ const ID_CLUSTER = 0x1F43B675
 const ID_SIMPLE_BLOCK = 0xA3
 const ID_BLOCK_GROUP = 0xA0
 const ID_BLOCK = 0xA1
+const ID_DISCARD_PADDING = 0x75A2
 
 // Master elements whose children we descend into
 const MASTER = new Set([
@@ -77,6 +78,13 @@ function readSize(b, o) {
 
 function readUint(b, o, n) {
 	let v = 0
+	for (let i = 0; i < n; i++) v = v * 256 + b[o + i]
+	return v
+}
+
+function readSint(b, o, n) {
+	if (!n) return 0
+	let v = b[o] & 0x80 ? -1 : 0
 	for (let i = 0; i < n; i++) v = v * 256 + b[o + i]
 	return v
 }
@@ -425,7 +433,21 @@ export async function decoder() {
 // --- codec adapters: { feed(frames: Uint8Array[]) → AudioData, flush() → AudioData, free() } ---
 
 function opusAdapter({ dec }) {
-	return { feed: frames => normResult(dec.decodeFrames(frames)), flush: () => EMPTY, free: () => dec.free() }
+	return {
+		feed(frames) {
+			if (!frames.discard) return normResult(dec.decodeFrames(frames))
+			let parts = []
+			frames.forEach((frame, i) => {
+				let r = normResult(dec.decodeFrames([frame]))
+				let drop = frames.discard.get(i)
+				if (drop && r.channelData.length) r = { channelData: r.channelData.map(ch => ch.subarray(0, Math.max(0, ch.length - drop))), sampleRate: r.sampleRate }
+				if (r.channelData[0]?.length) parts.push(r)
+			})
+			return parts.reduce(merge, EMPTY)
+		},
+		flush: () => EMPTY,
+		free: () => dec.free()
+	}
 }
 
 function vorbisAdapter({ dec, serial, seq }) {
@@ -436,7 +458,7 @@ function vorbisAdapter({ dec, serial, seq }) {
 	}
 }
 
-const UNSUPPORTED = { A_AC3: 'AC-3', A_EAC3: 'E-AC-3', A_DTS: 'DTS', A_TRUEHD: 'TrueHD', A_MLP: 'MLP', 'A_MS/ACM': 'MS/ACM', 'A_REAL/': 'RealAudio', A_QUICKTIME: 'QuickTime', A_WAVPACK4: 'WavPack', A_TTA1: 'TTA', 'A_MPEG/L2': 'MPEG-1 Layer II', 'A_MPEG/L1': 'MPEG-1 Layer I' }
+const UNSUPPORTED = { A_EAC3: 'E-AC-3', A_TRUEHD: 'TrueHD', A_MLP: 'MLP', 'A_MS/ACM': 'MS/ACM', 'A_REAL/': 'RealAudio', A_QUICKTIME: 'QuickTime', A_WAVPACK4: 'WavPack', A_TTA1: 'TTA', 'A_MPEG/L2': 'MPEG-1 Layer II', 'A_MPEG/L1': 'MPEG-1 Layer I' }
 
 async function createMatroskaCodec(info) {
 	let { codec, codecPrivate } = info
@@ -450,8 +472,12 @@ async function createMatroskaCodec(info) {
 		let dec = await (await import('@audio/decode-aac')).decoder({ alac: codecPrivate })
 		return { feed: frames => dec.decode(frames), flush: () => dec.flush(), free: () => dec.free() }
 	}
-	if (codec === 'A_MPEG/L3') {
-		let dec = await (await import('@audio/decode-mp3')).decoder()
+	// self-synchronizing frame streams: the codec resyncs on concatenated blocks
+	let stream = codec === 'A_MPEG/L3' ? import('@audio/decode-mp3')
+		: codec === 'A_AC3' || codec.startsWith('A_AC3/') ? import('@audio/decode-ac3')
+		: codec === 'A_DTS' || codec.startsWith('A_DTS/') ? import('@audio/decode-dts') : null
+	if (stream) {
+		let dec = await (await stream).decoder()
 		return { feed: frames => dec.decode(concat(frames)), flush: () => dec.flush?.() ?? EMPTY, free: () => dec.free() }
 	}
 	if (codec === 'A_FLAC') {
@@ -533,23 +559,38 @@ class EBMLScanner {
 			let dataOff = pos + eid.len + siz.len
 			let id = eid.val, dataLen = siz.val
 			// Master elements: descend (skip element header)
-			if (id === ID_SEGMENT || id === ID_CLUSTER || id === ID_BLOCK_GROUP) { pos = dataOff; continue }
+			if (id === ID_SEGMENT || id === ID_CLUSTER || (id === ID_BLOCK_GROUP && dataLen < 0)) { pos = dataOff; continue }
 			if (dataLen < 0) break // unknown-size non-master
 			if (dataOff + dataLen > buf.length) break // incomplete element
-			// SimpleBlock / Block: extract the audio frame(s) — laced blocks carry several
-			if ((id === ID_SIMPLE_BLOCK || id === ID_BLOCK) && dataLen > 4) {
-				let bp = dataOff
-				let tn = readSize(buf, bp)
-				if (tn && tn.val === this.trackNum) {
-					let flags = buf[bp + tn.len + 2]
-					bp += tn.len + 3
-					if (bp < dataOff + dataLen) unlace(buf, bp, dataOff + dataLen, (flags >> 1) & 3, frames)
+			if (id === ID_BLOCK_GROUP) {
+				// Block + DiscardPadding (samples to drop from the end of that block's output)
+				let gp = dataOff, gend = dataOff + dataLen, first = frames.length
+				while (gp < gend) {
+					let cid = readId(buf, gp); if (!cid) break
+					let csz = readSize(buf, gp + cid.len); if (!csz || csz.val < 0) break
+					let cdata = gp + cid.len + csz.len
+					if (cid.val === ID_BLOCK) this.block(buf, cdata, cdata + csz.val, frames)
+					else if (cid.val === ID_DISCARD_PADDING && frames.length > first) {
+						let ns = readSint(buf, cdata, csz.val)
+						if (ns > 0) (frames.discard ??= new Map()).set(frames.length - 1, Math.round(ns * 48000 / 1e9))
+					}
+					gp = cdata + csz.val
 				}
 			}
+			// SimpleBlock: extract the audio frame(s) — laced blocks carry several
+			else if (id === ID_SIMPLE_BLOCK && dataLen > 4) this.block(buf, dataOff, dataOff + dataLen, frames)
 			pos = dataOff + dataLen
 		}
 		if (pos < buf.length) this.left = buf.subarray(pos).slice()
 		return frames
+	}
+
+	block(buf, bp, end, frames) {
+		let tn = readSize(buf, bp)
+		if (!tn || tn.val !== this.trackNum) return
+		let flags = buf[bp + tn.len + 2]
+		bp += tn.len + 3
+		if (bp < end) unlace(buf, bp, end, (flags >> 1) & 3, frames)
 	}
 }
 

@@ -20,7 +20,7 @@ function snr(src, out, maxLag = 3000) {
 }
 const exact = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-4) return false; return true }
 
-const lossy = ['video-mp3.avi', 'video-aac.avi']
+const lossy = ['video-mp3.avi', 'video-aac.avi', 'video-ac3.avi', 'video-dts.avi']
 const lossless = ['video-pcm16.avi', 'video-pcm24.avi', 'video-f32.avi']
 
 for (let name of lossy) t(name + ' — audio track from video, lossy', async () => {
@@ -42,8 +42,8 @@ for (let name of lossless) t(name + ' — audio track from video, bit-exact', as
 
 t('unsupported codec names itself', async () => {
 	let err
-	try { await decode(fx('video-ac3.avi')) } catch (e) { err = e }
-	ok(err && /AC-3/.test(err.message), err?.message)
+	try { await decode(fx('video-wma.avi')) } catch (e) { err = e }
+	ok(err && /WMA/.test(err.message), err?.message)
 })
 
 t('streaming: chunks equal whole-file (1000-byte chunks)', async () => {

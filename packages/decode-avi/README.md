@@ -25,8 +25,10 @@ dec.free()
 | `0x0006`, `0x0007` | G.711 A-law, µ-law | built in |
 | `0x0055` | MP3 | [@audio/decode-mp3](../decode-mp3) |
 | `0x00FF` | AAC | [@audio/decode-aac](../decode-aac) |
+| `0x2000` | AC-3 | [@audio/decode-ac3](../decode-ac3) |
+| `0x2001` | DTS | [@audio/decode-dts](../decode-dts) |
 
-AC-3, DTS, WMA and ADPCM streams throw an error naming the codec. The first `auds` stream is decoded.
+WMA and ADPCM streams throw an error naming the codec. The first `auds` stream is decoded.
 
 Codec packages are imported dynamically, which is unavailable inside an AudioWorklet — decode in the main thread or a Worker.
 

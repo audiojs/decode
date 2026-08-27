@@ -1,7 +1,8 @@
 /**
  * MP4 / MOV / M4A / M4V / 3GP audio decoder — ISO BMFF demuxer that routes the audio track to a codec:
  * AAC, ALAC → @audio/decode-aac · MP3 → @audio/decode-mp3 · FLAC → @audio/decode-flac
- * Opus → @audio/decode-opus/core · AMR → @audio/decode-amr · PCM / µ-law / A-law inline.
+ * Opus → @audio/decode-opus/core · AMR → @audio/decode-amr · AC-3 → @audio/decode-ac3 · DTS → @audio/decode-dts
+ * PCM / µ-law / A-law inline.
  *
  * let { channelData, sampleRate } = await decode(mp4buf)
  * let dec = await decoder(); let result = await dec.decode(chunk)
@@ -248,13 +249,16 @@ function advance(st) {
 // ===== codec routing =====
 
 const MP3_OTI = new Set([0x69, 0x6B]), AAC_OTI = new Set([0x40, 0x66, 0x67, 0x68])
-const UNSUPPORTED = { 0xA5: 'AC-3', 0xA6: 'E-AC-3', 0xA9: 'DTS', 0xE1: 'QCELP', 'ac-3': 'AC-3', 'ec-3': 'E-AC-3', 'dtsc': 'DTS', 'dtsh': 'DTS-HD', 'dtsl': 'DTS-HD', 'dtse': 'DTS Express' }
+const UNSUPPORTED = { 0xA6: 'E-AC-3', 0xE1: 'QCELP', 'ec-3': 'E-AC-3' }
+const DTS_TYPES = new Set(['dtsc', 'dtsh', 'dtsl', 'dtse']) // DTS-HD variants carry a decodable core
 
 async function createCodec({ entry, children }) {
 	let { type } = entry
 	if (type === 'mp4a') {
 		let { oti, dsi } = children.esds ? parseEsds(children.esds) : {}
-		if (MP3_OTI.has(oti)) return mp3()
+		if (MP3_OTI.has(oti)) return frames(import('@audio/decode-mp3'))
+		if (oti === 0xA5) return frames(import('@audio/decode-ac3'))
+		if (oti === 0xA9) return frames(import('@audio/decode-dts'))
 		if (!oti || AAC_OTI.has(oti)) {
 			if (!dsi) throw Error('MP4 AAC track has no AudioSpecificConfig')
 			return aac({ asc: dsi })
@@ -265,7 +269,7 @@ async function createCodec({ entry, children }) {
 		if (!children.alac) throw Error('MP4 ALAC track has no magic cookie')
 		return aac({ alac: children.alac })
 	}
-	if (type === '.mp3') return mp3()
+	if (type === '.mp3') return frames(import('@audio/decode-mp3'))
 	if (type === 'fLaC') {
 		if (!children.dfLa) throw Error('MP4 FLAC track has no dfLa box')
 		return flac(children.dfLa.subarray(4))
@@ -275,6 +279,8 @@ async function createCodec({ entry, children }) {
 		return opus(children.dOps)
 	}
 	if (type === 'samr' || type === 'sawb') return amr(type === 'sawb')
+	if (type === 'ac-3') return frames(import('@audio/decode-ac3'))
+	if (DTS_TYPES.has(type)) return frames(import('@audio/decode-dts'))
 	let fmt = pcmFormat(entry, children)
 	if (fmt) return pcm(fmt)
 	throw unsupported(UNSUPPORTED[type] || type)
@@ -316,8 +322,9 @@ async function aac(opts) {
 	return { feed: frames => dec.decode(frames), flush: () => dec.flush(), free: () => dec.free() }
 }
 
-async function mp3() {
-	let dec = await (await import('@audio/decode-mp3')).decoder()
+// self-synchronizing frame streams (MP3, AC-3, DTS): the codec resyncs on concatenated samples
+async function frames(load) {
+	let dec = await (await load).decoder()
 	return { feed: frames => dec.decode(concat(frames)), flush: () => dec.flush?.() ?? EMPTY, free: () => dec.free() }
 }
 

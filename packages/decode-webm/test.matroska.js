@@ -18,7 +18,7 @@ function snr(src, out, maxLag = 3000) {
 }
 const exact = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-4) return false; return true }
 
-const lossy = ['video-opus.webm', 'video-aac.mkv', 'video-mp3.mkv', 'video-vorbis.mkv']
+const lossy = ['video-opus.webm', 'video-aac.mkv', 'video-mp3.mkv', 'video-vorbis.mkv', 'video-ac3.mkv', 'video-dts.mkv']
 const lossless = ['video-flac.mkv', 'video-alac.mkv', 'video-pcm16.mkv', 'video-pcm16be.mkv', 'video-pcm24.mkv', 'video-f32.mkv']
 
 for (let name of lossy) t(name + ' — audio track from video, lossy', async () => {
@@ -27,10 +27,7 @@ for (let name of lossy) t(name + ' — audio track from video, lossy', async () 
 	is(r.sampleRate, 48000)
 	let dur = r.channelData[0].length / r.sampleRate
 	ok(dur >= 0.49 && dur < 0.6, 'duration ' + dur.toFixed(3))
-	// ffmpeg's experimental built-in Vorbis encoder mangles the 880 Hz channel (1.4 dB SNR when ffmpeg
-	// itself decodes it); libvorbis output is verified by the WebM fixtures in test.js
-	let chs = name === 'video-vorbis.mkv' ? 1 : 2
-	for (let c = 0; c < chs; c++) ok(snr(ref.channelData[c], r.channelData[c]) > 15, 'ch' + c + ' SNR ' + snr(ref.channelData[c], r.channelData[c]).toFixed(1) + ' dB')
+	for (let c = 0; c < 2; c++) ok(snr(ref.channelData[c], r.channelData[c]) > 15, 'ch' + c + ' SNR ' + snr(ref.channelData[c], r.channelData[c]).toFixed(1) + ' dB')
 })
 
 for (let name of lossless) t(name + ' — audio track from video, bit-exact', async () => {
@@ -43,8 +40,8 @@ for (let name of lossless) t(name + ' — audio track from video, bit-exact', as
 
 t('unsupported codec names itself', async () => {
 	let err
-	try { await decode(fx('video-ac3.mkv')) } catch (e) { err = e }
-	ok(err && /AC-3/.test(err.message), err?.message)
+	try { await decode(fx('video-eac3.mkv')) } catch (e) { err = e }
+	ok(err && /E-AC-3/.test(err.message), err?.message)
 })
 
 t('streaming: chunks equal whole-file (1000-byte chunks)', async () => {
@@ -74,4 +71,15 @@ t('Opus/Vorbis stay synchronous; Matroska-only codecs resolve a Promise on the h
 	r = dec.decode(fx('video-aac.mkv'))
 	ok(r instanceof Promise, 'aac async while loading')
 	await r; dec.free()
+})
+
+t('DiscardPadding trims the last block: 33600-sample source decodes to 33600 samples', async () => {
+	let bytes = fx('discard-padding.webm') // @audio/encode-webm output, 0.7 s mono 440 Hz
+	let r = await decode(bytes)
+	is(r.channelData.length, 1)
+	is(r.channelData[0].length, 33600)
+	let dec = await decoder(), total = 0
+	for (let i = 0; i < bytes.length; i += 700) total += (await dec.decode(bytes.subarray(i, i + 700))).channelData[0]?.length || 0
+	total += (await dec.flush()).channelData[0]?.length || 0
+	is(total, 33600, 'chunked')
 })

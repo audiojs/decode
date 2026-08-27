@@ -35,6 +35,9 @@ const videoMov = await readFile(new URL('./packages/decode-mp4/fixtures/video-pc
 const videoMkv = await readFile(new URL('./packages/decode-webm/fixtures/video-aac.mkv', import.meta.url))
 const videoWebm = await readFile(new URL('./packages/decode-webm/fixtures/video-opus.webm', import.meta.url))
 const videoAvi = await readFile(new URL('./packages/decode-avi/fixtures/video-mp3.avi', import.meta.url))
+const rawAc3 = await readFile(new URL('./packages/decode-ac3/fixtures/stereo.ac3', import.meta.url))
+const rawDts = await readFile(new URL('./packages/decode-dts/fixtures/stereo.dts', import.meta.url))
+const videoAc3 = await readFile(new URL('./packages/decode-webm/fixtures/video-ac3.mkv', import.meta.url))
 
 const dur = r => r.channelData[0].length / r.sampleRate
 const rms = f32 => { let s = 0; for (let i = 0; i < f32.length; i++) s += f32[i] * f32[i]; return Math.sqrt(s / f32.length) }
@@ -212,7 +215,7 @@ const workletPCM = {
 	mp3: workletAudio(2, 541184, 44100),
 	opusBody: workletAudio(1, 575688, 48000),
 	opusTail: workletAudio(1, 13356, 48000),
-	webmOpus: workletAudio(1, 589128, 48000),
+	webmOpus: workletAudio(1, 589044, 48000), // 589128 encoded minus the 84-sample DiscardPadding on the last block
 	webmVorbisBody: workletAudio(1, 432064, 44100),
 	webmVorbisTail: workletAudio(1, 110080, 44100),
 	aac: workletAudio(1, 542720, 44100),
@@ -848,6 +851,16 @@ t('video containers: mp4, mov, mkv, webm, avi', async () => {
 		is(near(dur(r), 0.5, 0.06), true, name + ' duration ' + dur(r).toFixed(3))
 		let mid = r.channelData[0].subarray(4000, 20000) // clear of codec priming / padding
 		is(near(rms(mid), 0.354, 0.02), true, name + ' rms ' + rms(mid).toFixed(3)) // 0.5-amplitude sine
+	}
+})
+
+t('ac3 / dts raw streams and an AC-3 track in mkv', async () => {
+	for (let [name, bytes] of [['ac3', rawAc3], ['dts', rawDts], ['mkv+ac3', videoAc3]]) {
+		let r = await decode(bytes)
+		is(r.channelData.length, 2, name + ' stereo')
+		is(r.sampleRate, 48000, name + ' rate')
+		let mid = r.channelData[1].subarray(4000, 20000)
+		is(near(rms(mid), 0.354, 0.02), true, name + ' rms ' + rms(mid).toFixed(3))
 	}
 })
 

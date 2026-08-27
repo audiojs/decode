@@ -1,0 +1,64 @@
+{
+  "name": "@audio/decode-ac3",
+  "version": "1.0.0",
+  "description": "Decode AC-3 (Dolby Digital) audio with liba52 WASM",
+  "type": "module",
+  "main": "decode-ac3.js",
+  "types": "decode-ac3.d.ts",
+  "exports": {
+    ".": "./decode-ac3.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-ac3.js",
+    "decode-ac3.d.ts",
+    "src/ac3.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.liba52"
+  ],
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ac3",
+    "ac-3",
+    "dolby",
+    "a52",
+    "surround",
+    "5.1",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "liba52"
+  ],
+  "license": "GPL-2.0-or-later",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-ac3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-ac3"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

@@ -1,6 +1,6 @@
 /**
  * AVI audio decoder — RIFF/AVI demuxer (incl. OpenDML AVIX) that routes the audio stream to a codec:
- * PCM / µ-law / A-law inline · MP3 → @audio/decode-mp3 · AAC → @audio/decode-aac.
+ * PCM / µ-law / A-law inline · MP3 → @audio/decode-mp3 · AAC → @audio/decode-aac · AC-3 → @audio/decode-ac3 · DTS → @audio/decode-dts.
  *
  * let { channelData, sampleRate } = await decode(avibuf)
  * let dec = await decoder(); let result = await dec.decode(chunk)
@@ -133,7 +133,7 @@ function parseWaveFormat(b) {
 	return f
 }
 
-const NAMES = { 0x2000: 'AC-3', 0x2001: 'DTS', 0x160: 'WMA v1', 0x161: 'WMA v2', 0x162: 'WMA Pro', 0x163: 'WMA Lossless', 0x50: 'MPEG-1 Layer II', 0x2: 'MS ADPCM', 0x11: 'IMA ADPCM', 0x22: 'TrueSpeech', 0x31: 'GSM 6.10', 0x8000: 'AAC' }
+const NAMES = { 0x160: 'WMA v1', 0x161: 'WMA v2', 0x162: 'WMA Pro', 0x163: 'WMA Lossless', 0x50: 'MPEG-1 Layer II', 0x2: 'MS ADPCM', 0x11: 'IMA ADPCM', 0x22: 'TrueSpeech', 0x31: 'GSM 6.10', 0x8000: 'AAC' }
 
 async function createCodec(fmt) {
 	switch (fmt.tag) {
@@ -141,7 +141,9 @@ async function createCodec(fmt) {
 		case 3: return pcm({ ...fmt, float: true, signed: true })
 		case 6: return pcm({ ...fmt, bits: 8, law: 'a' })
 		case 7: return pcm({ ...fmt, bits: 8, law: 'u' })
-		case 0x55: return mp3()
+		case 0x55: return frames(import('@audio/decode-mp3'))
+		case 0x2000: return frames(import('@audio/decode-ac3'))
+		case 0x2001: return frames(import('@audio/decode-dts'))
 		case 0xFF: {
 			if (!fmt.extra?.length) throw Error('AVI AAC stream has no AudioSpecificConfig')
 			let dec = await (await import('@audio/decode-aac')).decoder({ asc: fmt.extra })
@@ -151,8 +153,9 @@ async function createCodec(fmt) {
 	throw Error('Unsupported AVI audio codec: ' + (NAMES[fmt.tag] || 'wFormatTag 0x' + fmt.tag.toString(16)))
 }
 
-async function mp3() {
-	let dec = await (await import('@audio/decode-mp3')).decoder()
+// self-synchronizing frame streams (MP3, AC-3, DTS): the codec resyncs on concatenated chunks
+async function frames(load) {
+	let dec = await (await load).decoder()
 	return { feed: frames => dec.decode(concat(frames)), flush: () => dec.flush?.() ?? EMPTY, free: () => dec.free() }
 }
 

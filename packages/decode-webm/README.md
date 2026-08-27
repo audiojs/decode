@@ -1,6 +1,6 @@
 # @audio/decode-webm
 
-Decode WebM and Matroska (MKV) audio to PCM float samples — the audio track of video files included.
+Decode WebM and Matroska (MKV) audio to PCM float samples — the audio track of video files included (Opus, Vorbis, AAC, ALAC, MP3, FLAC, AC-3, DTS, PCM).
 
 ## Install
 
@@ -46,8 +46,10 @@ The factory prepares the Opus and Vorbis runtimes, then releases what the track 
 | `A_MPEG/L3` | [@audio/decode-mp3](../decode-mp3), loaded on demand |
 | `A_FLAC` | [@audio/decode-flac](../decode-flac), loaded on demand |
 | `A_PCM/INT/LIT`, `A_PCM/INT/BIG`, `A_PCM/FLOAT/IEEE` | built in |
+| `A_AC3` | [@audio/decode-ac3](../decode-ac3), loaded on demand |
+| `A_DTS` (core of DTS-HD too) | [@audio/decode-dts](../decode-dts), loaded on demand |
 
-AC-3, E-AC-3, DTS, TrueHD, MPEG Layer I/II and `A_MS/ACM` tracks throw an error naming the codec.
+E-AC-3, TrueHD, MPEG Layer I/II and `A_MS/ACM` tracks throw an error naming the codec. `DiscardPadding` on Opus blocks is honoured, so files from @audio/encode-webm decode sample-exact.
 
 On-demand codec packages are imported dynamically, which is unavailable inside an AudioWorklet — Opus and Vorbis work there, the others need the main thread or a Worker.
 

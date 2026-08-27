@@ -145,6 +145,8 @@ reg('caf', () => import('@audio/decode-caf'))
 reg('webm', () => import('@audio/decode-webm'))
 reg('mkv', () => import('@audio/decode-webm'), true)
 reg('avi', () => import('@audio/decode-avi'), true)
+reg('ac3', () => import('@audio/decode-ac3'))
+reg('dts', () => import('@audio/decode-dts'))
 reg('amr', () => import('@audio/decode-amr'))
 reg('wma', () => import('@audio/decode-wma'), true)
 

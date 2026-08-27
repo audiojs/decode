@@ -1,7 +1,7 @@
 # @audio/decode-mp4
 
 Decode the audio track of MP4, MOV, M4A, M4V and 3GP files to PCM float samples.<br>
-A pure-JS ISO BMFF demuxer that skips the video track and routes the audio to the matching codec package, loaded on demand.
+A pure-JS ISO BMFF demuxer that skips the video track and routes the audio (AAC, ALAC, MP3, FLAC, Opus, AC-3, DTS, AMR, PCM) to the matching codec package, loaded on demand.
 
 [![npm install @audio/decode-mp4](https://nodei.co/npm/@audio/decode-mp4.png?mini=true)](https://npmjs.org/package/@audio/decode-mp4/)
 
@@ -29,8 +29,10 @@ dec.free()
 | `samr`, `sawb` | AMR-NB, AMR-WB | [@audio/decode-amr](../decode-amr) |
 | `sowt`, `twos`, `in24`, `in32`, `fl32`, `fl64`, `lpcm`, `ipcm`, `fpcm`, `raw `, `NONE` | PCM 8–32 bit int, 32/64 bit float, either endianness | built in |
 | `ulaw`, `alaw` | G.711 | built in |
+| `ac-3`, `mp4a` (0xA5) | AC-3 | [@audio/decode-ac3](../decode-ac3) |
+| `dtsc`, `dtsh`, `dtsl`, `dtse`, `mp4a` (0xA9) | DTS (core) | [@audio/decode-dts](../decode-dts) |
 
-AC-3, E-AC-3 and DTS tracks throw an error naming the codec. Fragmented MP4 (`moof`) is not supported. QuickTime sound descriptions v0, v1 and v2 are handled, including `wave`-wrapped configs and `enda` endianness flags. When `moov` follows `mdat` (typical of camera and QuickTime output) the file is buffered until the header arrives.
+E-AC-3 tracks throw an error naming the codec. Fragmented MP4 (`moof`) is not supported. QuickTime sound descriptions v0, v1 and v2 are handled, including `wave`-wrapped configs and `enda` endianness flags. When `moov` follows `mdat` (typical of camera and QuickTime output) the file is buffered until the header arrives.
 
 Codec packages are imported dynamically, which is unavailable inside an AudioWorklet — decode in the main thread or a Worker.
 
