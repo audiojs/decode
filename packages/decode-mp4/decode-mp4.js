@@ -1,8 +1,8 @@
 /**
  * MP4 / MOV / M4A / M4V / 3GP audio decoder — ISO BMFF demuxer that routes the audio track to a codec:
  * AAC, ALAC → @audio/decode-aac · MP3 → @audio/decode-mp3 · FLAC → @audio/decode-flac
- * Opus → @audio/decode-opus/core · AMR → @audio/decode-amr · AC-3 → @audio/decode-ac3 · DTS → @audio/decode-dts
- * PCM / µ-law / A-law inline.
+ * Opus → @audio/decode-opus/core · AMR → @audio/decode-amr · AC-3 → @audio/decode-ac3 · E-AC-3 → @audio/decode-eac3
+ * DTS → @audio/decode-dts · PCM / µ-law / A-law inline.
  *
  * let { channelData, sampleRate } = await decode(mp4buf)
  * let dec = await decoder(); let result = await dec.decode(chunk)
@@ -249,7 +249,7 @@ function advance(st) {
 // ===== codec routing =====
 
 const MP3_OTI = new Set([0x69, 0x6B]), AAC_OTI = new Set([0x40, 0x66, 0x67, 0x68])
-const UNSUPPORTED = { 0xA6: 'E-AC-3', 0xE1: 'QCELP', 'ec-3': 'E-AC-3' }
+const UNSUPPORTED = { 0xE1: 'QCELP' }
 const DTS_TYPES = new Set(['dtsc', 'dtsh', 'dtsl', 'dtse']) // DTS-HD variants carry a decodable core
 
 async function createCodec({ entry, children }) {
@@ -259,6 +259,7 @@ async function createCodec({ entry, children }) {
 		if (MP3_OTI.has(oti)) return frames(import('@audio/decode-mp3'))
 		if (oti === 0xA5) return frames(import('@audio/decode-ac3'))
 		if (oti === 0xA9) return frames(import('@audio/decode-dts'))
+		if (oti === 0xA6) return frames(import('@audio/decode-eac3'))
 		if (!oti || AAC_OTI.has(oti)) {
 			if (!dsi) throw Error('MP4 AAC track has no AudioSpecificConfig')
 			return aac({ asc: dsi })
@@ -280,6 +281,7 @@ async function createCodec({ entry, children }) {
 	}
 	if (type === 'samr' || type === 'sawb') return amr(type === 'sawb')
 	if (type === 'ac-3') return frames(import('@audio/decode-ac3'))
+	if (type === 'ec-3') return frames(import('@audio/decode-eac3'))
 	if (DTS_TYPES.has(type)) return frames(import('@audio/decode-dts'))
 	let fmt = pcmFormat(entry, children)
 	if (fmt) return pcm(fmt)

@@ -1,0 +1,62 @@
+{
+  "name": "@audio/decode-wavpack",
+  "version": "1.0.0",
+  "description": "Decode WavPack (.wv) audio with libwavpack WASM",
+  "type": "module",
+  "main": "decode-wavpack.js",
+  "types": "decode-wavpack.d.ts",
+  "exports": {
+    ".": "./decode-wavpack.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-wavpack.js",
+    "decode-wavpack.d.ts",
+    "src/wavpack.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.wavpack"
+  ],
+  "devDependencies": {
+    "tst": "^9.4.0"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "wavpack",
+    "wv",
+    "hybrid",
+    "lossless",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "libwavpack"
+  ],
+  "license": "BSD-3-Clause",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-wavpack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-wavpack"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

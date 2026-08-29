@@ -1,0 +1,58 @@
+{
+  "name": "@audio/decode-tta",
+  "version": "1.0.0",
+  "description": "Decode TTA (True Audio) lossless audio to PCM samples",
+  "type": "module",
+  "main": "decode-tta.js",
+  "types": "decode-tta.d.ts",
+  "exports": {
+    ".": "./decode-tta.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "decode-tta.js",
+    "decode-tta.d.ts",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.ttadec"
+  ],
+  "devDependencies": {
+    "tst": "^9.4.0"
+  },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "tta",
+    "true-audio",
+    "lossless",
+    "audio",
+    "decode",
+    "decoder",
+    "pcm",
+    "rice-coding"
+  ],
+  "license": "MIT",
+  "author": "Dmitry Iv. <dfcreative@gmail.com>",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-tta",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-tta"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "engines": {
+    "node": ">=18"
+  },
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "funding": "https://github.com/sponsors/audiojs"
+}

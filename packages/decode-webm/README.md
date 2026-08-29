@@ -48,8 +48,9 @@ The factory prepares the Opus and Vorbis runtimes, then releases what the track 
 | `A_PCM/INT/LIT`, `A_PCM/INT/BIG`, `A_PCM/FLOAT/IEEE` | built in |
 | `A_AC3` | [@audio/decode-ac3](../decode-ac3), loaded on demand |
 | `A_DTS` (core of DTS-HD too) | [@audio/decode-dts](../decode-dts), loaded on demand |
+| `A_EAC3` | [@audio/decode-eac3](../decode-eac3), loaded on demand |
 
-E-AC-3, TrueHD, MPEG Layer I/II and `A_MS/ACM` tracks throw an error naming the codec. `DiscardPadding` on Opus blocks is honoured, so files from @audio/encode-webm decode sample-exact.
+TrueHD, MPEG Layer I/II, WavPack, TTA and `A_MS/ACM` tracks throw an error naming the codec. `DiscardPadding` on Opus blocks is honoured, so files from @audio/encode-webm decode sample-exact.
 
 On-demand codec packages are imported dynamically, which is unavailable inside an AudioWorklet — Opus and Vorbis work there, the others need the main thread or a Worker.
 

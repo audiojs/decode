@@ -40,10 +40,18 @@ for (let name of lossless) t(name + ' — audio track from video, bit-exact', as
 	for (let c = 0; c < 2; c++) ok(exact(ref.channelData[c], r.channelData[c]), 'ch' + c + ' identical to reference')
 })
 
-t('unsupported codec names itself', async () => {
-	let err
-	try { await decode(fx('video-eac3.mp4')) } catch (e) { err = e }
-	ok(err && /E-AC-3/.test(err.message), err?.message)
+t('video-eac3.mp4 — E-AC-3 track routes to @audio/decode-eac3', async () => {
+	let r = await decode(fx('video-eac3.mp4'))
+	is(r.sampleRate, 48000, 'E-AC-3 is always 48 kHz')
+	is(r.channelData.length, 2, 'stereo')
+	// tones as in the other video fixtures: 440 Hz left, 880 Hz right (Goertzel pick among candidates)
+	let tone = d => [220, 440, 880, 1760].map(f => {
+		let w = 2 * Math.PI * f / r.sampleRate, c = 2 * Math.cos(w), s0 = 0, s1 = 0, s2 = 0
+		for (let i = 2000; i < Math.min(d.length, 22000); i++) { s0 = d[i] + c * s1 - s2; s2 = s1; s1 = s0 }
+		return [f, s1 * s1 + s2 * s2 - c * s1 * s2]
+	}).sort((a, b) => b[1] - a[1])[0][0]
+	is(tone(r.channelData[0]), 440, 'left tone')
+	is(tone(r.channelData[1]), 880, 'right tone')
 })
 
 t('streaming: chunks equal whole-file (moov after mdat, 1000-byte chunks)', async () => {

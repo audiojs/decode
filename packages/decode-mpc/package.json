@@ -1,0 +1,64 @@
+{
+  "name": "@audio/decode-mpc",
+  "version": "1.0.0",
+  "description": "Decode Musepack (MPC, SV7 and SV8) audio with libmpcdec WASM",
+  "type": "module",
+  "main": "decode-mpc.js",
+  "types": "decode-mpc.d.ts",
+  "exports": {
+    ".": "./decode-mpc.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-mpc.js",
+    "decode-mpc.d.ts",
+    "src/mpc.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.libmpcdec"
+  ],
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "mpc",
+    "musepack",
+    "mp+",
+    "mpck",
+    "sv7",
+    "sv8",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "libmpcdec"
+  ],
+  "license": "BSD-3-Clause",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-mpc",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-mpc"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

@@ -16,3 +16,16 @@
 [submodule "packages/decode-dts/lib/libdca"]
 	path = packages/decode-dts/lib/libdca
 	url = https://code.videolan.org/videolan/libdca.git
+[submodule "packages/decode-wavpack/lib/wavpack"]
+	path = packages/decode-wavpack/lib/wavpack
+	url = https://github.com/dbry/WavPack.git
+[submodule "lib/ffmpeg"]
+	path = lib/ffmpeg
+	url = https://github.com/FFmpeg/FFmpeg.git
+	branch = release/7.1
+[submodule "packages/decode-mpc/lib/libmpc"]
+	path = packages/decode-mpc/lib/libmpc
+	url = https://github.com/evpobr/libmpc.git
+[submodule "packages/decode-mod/lib/openmpt"]
+	path = packages/decode-mod/lib/openmpt
+	url = https://github.com/OpenMPT/openmpt.git

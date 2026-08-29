@@ -1,0 +1,63 @@
+{
+  "name": "@audio/decode-ape",
+  "version": "1.0.0",
+  "description": "Decode Monkey's Audio (APE) with FFmpeg's ape decoder, WASM",
+  "type": "module",
+  "main": "decode-ape.js",
+  "types": "decode-ape.d.ts",
+  "exports": {
+    ".": "./decode-ape.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-ape.js",
+    "decode-ape.d.ts",
+    "src/ape.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.ffmpeg"
+  ],
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "ape",
+    "monkeys audio",
+    "monkey's audio",
+    "lossless",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "ffmpeg",
+    "libavcodec"
+  ],
+  "license": "LGPL-2.1-or-later",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-ape",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-ape"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode-webm",
-  "version": "1.6.0",
+  "version": "1.6.1",
   "description": "Decode WebM / Matroska audio (Opus, Vorbis, AAC, MP3, FLAC, ALAC, PCM) to PCM samples",
   "type": "module",
   "main": "decode-webm.js",
@@ -29,7 +29,8 @@
     "@audio/decode-flac": "^1.3.0",
     "@audio/decode-mp3": "^1.3.0",
     "@audio/decode-opus": "^1.3.0",
-    "@audio/decode-vorbis": "^1.3.0"
+    "@audio/decode-vorbis": "^1.3.0",
+    "@audio/decode-eac3": "^1.0.0"
   },
   "keywords": [
     "webm",

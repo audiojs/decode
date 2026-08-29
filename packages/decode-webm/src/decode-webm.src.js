@@ -458,7 +458,7 @@ function vorbisAdapter({ dec, serial, seq }) {
 	}
 }
 
-const UNSUPPORTED = { A_EAC3: 'E-AC-3', A_TRUEHD: 'TrueHD', A_MLP: 'MLP', 'A_MS/ACM': 'MS/ACM', 'A_REAL/': 'RealAudio', A_QUICKTIME: 'QuickTime', A_WAVPACK4: 'WavPack', A_TTA1: 'TTA', 'A_MPEG/L2': 'MPEG-1 Layer II', 'A_MPEG/L1': 'MPEG-1 Layer I' }
+const UNSUPPORTED = { A_TRUEHD: 'TrueHD', A_MLP: 'MLP', 'A_MS/ACM': 'MS/ACM', 'A_REAL/': 'RealAudio', A_QUICKTIME: 'QuickTime', A_WAVPACK4: 'WavPack', A_TTA1: 'TTA', 'A_MPEG/L2': 'MPEG-1 Layer II', 'A_MPEG/L1': 'MPEG-1 Layer I' }
 
 async function createMatroskaCodec(info) {
 	let { codec, codecPrivate } = info
@@ -475,6 +475,7 @@ async function createMatroskaCodec(info) {
 	// self-synchronizing frame streams: the codec resyncs on concatenated blocks
 	let stream = codec === 'A_MPEG/L3' ? import('@audio/decode-mp3')
 		: codec === 'A_AC3' || codec.startsWith('A_AC3/') ? import('@audio/decode-ac3')
+		: codec === 'A_EAC3' ? import('@audio/decode-eac3')
 		: codec === 'A_DTS' || codec.startsWith('A_DTS/') ? import('@audio/decode-dts') : null
 	if (stream) {
 		let dec = await (await stream).decoder()

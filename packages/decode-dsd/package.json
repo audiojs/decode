@@ -1,0 +1,64 @@
+{
+  "name": "@audio/decode-dsd",
+  "version": "1.0.0",
+  "description": "Decode DSD (DSF, DFF) audio to PCM samples",
+  "type": "module",
+  "main": "decode-dsd.js",
+  "types": "decode-dsd.d.ts",
+  "exports": {
+    ".": "./decode-dsd.js",
+    "./meta": "./meta.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "decode-dsd.js",
+    "decode-dsd.d.ts",
+    "meta.js",
+    "LICENSE",
+    "audio.js",
+    "audio.d.ts"
+  ],
+  "scripts": {
+    "test": "node test.js"
+  },
+  "keywords": [
+    "dsd",
+    "dsf",
+    "dff",
+    "dsdiff",
+    "sacd",
+    "audio",
+    "decode",
+    "decoder",
+    "pcm",
+    "sigma-delta"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/master/packages/decode-dsd#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-dsd"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "dependencies": {
+    "@audio/decode-mp3": "^1.3.0"
+  },
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

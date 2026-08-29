@@ -150,6 +150,21 @@ reg('dts', () => import('@audio/decode-dts'))
 reg('amr', () => import('@audio/decode-amr'))
 reg('wma', () => import('@audio/decode-wma'), true)
 
+// lossless / audiophile long tail
+reg('wv', () => import('@audio/decode-wavpack'))
+reg('tta', () => import('@audio/decode-tta'))
+reg('ape', () => import('@audio/decode-ape'))
+reg('mpc', () => import('@audio/decode-mpc'))
+reg('eac3', () => import('@audio/decode-eac3'))
+reg('dsf', () => import('@audio/decode-dsd'))
+reg('dff', () => import('@audio/decode-dsd'))
+
+// tracker modules — one libopenmpt renderer, four format names
+reg('mod', () => import('@audio/decode-mod'))
+reg('xm', () => import('@audio/decode-mod'))
+reg('s3m', () => import('@audio/decode-mod'))
+reg('it', () => import('@audio/decode-mod'))
+
 /**
  * StreamDecoder — a callable function:
  * dec(chunk)  — decode data, returns { channelData, sampleRate }

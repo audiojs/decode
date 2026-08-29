@@ -1,0 +1,68 @@
+{
+  "name": "@audio/decode-eac3",
+  "version": "1.0.0",
+  "description": "Decode E-AC-3 (Dolby Digital Plus) and AC-3 with FFmpeg's eac3 decoder, WASM",
+  "type": "module",
+  "main": "decode-eac3.js",
+  "types": "decode-eac3.d.ts",
+  "exports": {
+    ".": "./decode-eac3.js",
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "bash build.sh",
+    "prepack": "npm run build",
+    "test": "node test.js"
+  },
+  "files": [
+    "decode-eac3.js",
+    "decode-eac3.d.ts",
+    "src/eac3.wasm.js",
+    "audio.js",
+    "audio.d.ts",
+    "LICENSE",
+    "LICENSE.ffmpeg"
+  ],
+  "devDependencies": {
+    "tst": "^9.2.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "eac3",
+    "e-ac-3",
+    "ac3",
+    "ac-3",
+    "dolby digital plus",
+    "dolby",
+    "surround",
+    "5.1",
+    "7.1",
+    "audio",
+    "decode",
+    "decoder",
+    "wasm",
+    "ffmpeg",
+    "libavcodec"
+  ],
+  "license": "LGPL-2.1-or-later",
+  "author": "audiojs",
+  "homepage": "https://github.com/audiojs/decode/tree/main/packages/decode-eac3",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/audiojs/decode.git",
+    "directory": "packages/decode-eac3"
+  },
+  "bugs": "https://github.com/audiojs/decode/issues",
+  "audio": "./audio.js",
+  "sideEffects": false,
+  "funding": "https://github.com/sponsors/audiojs"
+}

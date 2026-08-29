@@ -18,7 +18,7 @@ function snr(src, out, maxLag = 3000) {
 }
 const exact = (a, b) => { if (a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 1e-4) return false; return true }
 
-const lossy = ['video-opus.webm', 'video-aac.mkv', 'video-mp3.mkv', 'video-vorbis.mkv', 'video-ac3.mkv', 'video-dts.mkv']
+const lossy = ['video-opus.webm', 'video-aac.mkv', 'video-mp3.mkv', 'video-vorbis.mkv', 'video-ac3.mkv', 'video-eac3.mkv', 'video-dts.mkv']
 const lossless = ['video-flac.mkv', 'video-alac.mkv', 'video-pcm16.mkv', 'video-pcm16be.mkv', 'video-pcm24.mkv', 'video-f32.mkv']
 
 for (let name of lossy) t(name + ' — audio track from video, lossy', async () => {
@@ -36,12 +36,6 @@ for (let name of lossless) t(name + ' — audio track from video, bit-exact', as
 	is(r.sampleRate, 48000)
 	is(r.channelData[0].length, ref.channelData[0].length, 'sample count')
 	for (let c = 0; c < 2; c++) ok(exact(ref.channelData[c], r.channelData[c]), 'ch' + c + ' identical to reference')
-})
-
-t('unsupported codec names itself', async () => {
-	let err
-	try { await decode(fx('video-eac3.mkv')) } catch (e) { err = e }
-	ok(err && /E-AC-3/.test(err.message), err?.message)
 })
 
 t('streaming: chunks equal whole-file (1000-byte chunks)', async () => {

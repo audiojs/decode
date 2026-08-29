@@ -1,5 +1,7 @@
 # @audio/decode [![test](https://github.com/audiojs/decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/decode/actions/workflows/test.js.yml)
 
+Try it in the browser: [Extract audio from video](https://audiojs.dev/util/extract-audio/), [Audio converter](https://audiojs.dev/util/convert-audio/). Runs on this package, nothing is uploaded.
+
 Decode any audio format to raw samples.<br>
 JS / WASM with no ffmpeg or native bindings; works in Node.js and browsers.<br>
 Small API, minimal size, near-native performance, lazy-loading, chunked decoding.
@@ -30,8 +32,15 @@ const { channelData, sampleRate } = await decode(anyAudioBuffer);
 | AVI video | [@audio/decode-avi](./packages/decode-avi) | 8 KB + codec | JS demux |
 | AC-3 | [@audio/decode-ac3](./packages/decode-ac3) | 43 KB | WASM |
 | DTS | [@audio/decode-dts](./packages/decode-dts) | 200 KB | WASM |
+| E-AC-3 (Dolby Digital Plus, + AC-3) | [@audio/decode-eac3](./packages/decode-eac3) | 432 KB | WASM (FFmpeg libavcodec, LGPL) |
+| APE (Monkey's Audio) | [@audio/decode-ape](./packages/decode-ape) | 262 KB | WASM (FFmpeg libavcodec, LGPL) |
 | AMR | [@audio/decode-amr](./packages/decode-amr) | 241 KB | WASM |
 | WMA | [@audio/decode-wma](./packages/decode-wma) | 91 KB | WASM |
+| WavPack | [@audio/decode-wavpack](./packages/decode-wavpack) | 51 KB | WASM |
+| TTA (True Audio) | [@audio/decode-tta](./packages/decode-tta) | 11 KB | JS |
+| Musepack SV7 / SV8 | [@audio/decode-mpc](./packages/decode-mpc) | 51 KB | WASM |
+| MOD / XM / S3M / IT tracker modules | [@audio/decode-mod](./packages/decode-mod) | 1.4 MB | WASM (libopenmpt) |
+| DSF / DFF (DSD64–512 → PCM) | [@audio/decode-dsd](./packages/decode-dsd) | 18 KB | JS |
 
 ### Whole-file
 
@@ -67,7 +76,7 @@ for await (let { channelData, sampleRate } of decode.mp3(response.body)) {
 
 Works with `ReadableStream`, `fetch` body, Node stream, or any async iterable.
 
-Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `mp4`, `mov`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `mkv`, `avi`, `ac3`, `dts`, `amr`, `wma`.
+Formats: `mp3`, `flac`, `opus`, `oga`, `m4a`, `mp4`, `mov`, `wav`, `qoa`, `aac`, `aiff`, `caf`, `webm`, `mkv`, `avi`, `ac3`, `dts`, `amr`, `wma`, `eac3`, `ape`, `wv`, `tta`, `mpc`, `dsf`, `dff`, `mod`, `xm`, `s3m`, `it`.
 
 ### Video files
 
@@ -177,6 +186,6 @@ worker.onmessage = ({ data }) => { /* { channelData, sampleRate } */ }
 
 ## Licensing
 
-The umbrella and most codec packages are MIT. Five codecs use another license: <a href="./packages/decode-aac">@audio/decode-aac</a> GPL-2.0, <a href="./packages/decode-wma">@audio/decode-wma</a>, <a href="./packages/decode-ac3">@audio/decode-ac3</a> and <a href="./packages/decode-dts">@audio/decode-dts</a> GPL-2.0-or-later, and <a href="./packages/decode-amr">@audio/decode-amr</a> Apache-2.0. Install only the codecs whose licenses fit your project. The umbrella loads them on demand.
+The umbrella and most codec packages are MIT. Codecs built on other libraries carry that library's license: <a href="./packages/decode-aac">@audio/decode-aac</a> GPL-2.0; <a href="./packages/decode-wma">@audio/decode-wma</a>, <a href="./packages/decode-ac3">@audio/decode-ac3</a> and <a href="./packages/decode-dts">@audio/decode-dts</a> GPL-2.0-or-later; <a href="./packages/decode-ape">@audio/decode-ape</a> and <a href="./packages/decode-eac3">@audio/decode-eac3</a> LGPL-2.1-or-later (a slim FFmpeg libavcodec build, no GPL components); <a href="./packages/decode-wavpack">@audio/decode-wavpack</a>, <a href="./packages/decode-mpc">@audio/decode-mpc</a> and <a href="./packages/decode-mod">@audio/decode-mod</a> BSD-3-Clause; <a href="./packages/decode-amr">@audio/decode-amr</a> Apache-2.0. Install only the codecs whose licenses fit your project. The umbrella loads them on demand.
 
 <p align="center"><a href="https://github.com/krishnized/license/">ॐ</a> · <a href="./LICENSE">MIT</a>

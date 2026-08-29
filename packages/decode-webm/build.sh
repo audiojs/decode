@@ -14,4 +14,5 @@ npx esbuild src/decode-webm.src.js \
   --external:@audio/decode-mp3 \
   --external:@audio/decode-flac \
   --external:@audio/decode-ac3 \
-  --external:@audio/decode-dts
+  --external:@audio/decode-dts \
+  --external:@audio/decode-eac3

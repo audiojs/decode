@@ -873,3 +873,34 @@ t('chunked stream mp4 / mkv / avi', async () => {
 		is(total, whole.channelData[0].length, fmt + ' chunked equals whole')
 	}
 })
+
+// -- 2026-08 long-tail codecs: one whole-file decode per format through the umbrella (bit-exactness lives in each package's own suite) --
+
+const longTail = [
+	['wv', './packages/decode-wavpack/fixtures/stereo16.wv', 48000],
+	['tta', './packages/decode-tta/fixtures/stereo16.tta', null],
+	['ape', './packages/decode-ape/fixtures/stereo-c2000.ape', null],
+	['mpc', './packages/decode-mpc/fixtures/standard.mpc', 48000],
+	['eac3', './packages/decode-eac3/fixtures/stereo.eac3', 48000],
+]
+for (let [fmt, path, rate] of longTail) t('long tail: ' + fmt, async () => {
+	let bytes = await readFile(new URL(path, import.meta.url))
+	let r = await decode(bytes)
+	is(r.channelData.length, 2, fmt + ' stereo')
+	if (rate) is(r.sampleRate, rate, fmt + ' sample rate')
+	is(near(dur(r), 0.5, 0.1), true, fmt + ' duration ' + dur(r).toFixed(3))
+	is(rms(r.channelData[0]) > 0.01, true, fmt + ' has signal')
+	let dec = await decode[fmt](), total = 0
+	for (let i = 0; i < bytes.length; i += 1000) total += (await dec(bytes.subarray(i, i + 1000))).channelData[0]?.length ?? 0
+	total += (await dec()).channelData[0]?.length ?? 0
+	is(total, r.channelData[0].length, fmt + ' chunked equals whole')
+})
+
+t('long tail: tracker modules (mod / xm / s3m / it)', async () => {
+	for (let [fmt, name] of [['mod', 'test.mod'], ['xm', 'test.xm'], ['s3m', 'test.s3m'], ['it', 'test.mptm']]) {
+		let r = await decode(await readFile(new URL('./packages/decode-mod/fixtures/' + name, import.meta.url)))
+		is(r.sampleRate, 48000, fmt + ' renders at 48 kHz')
+		is(r.channelData.length, 2, fmt + ' stereo')
+		is(r.channelData[0].length > 0, true, fmt + ' has frames')
+	}
+})
