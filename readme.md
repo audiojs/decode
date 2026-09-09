@@ -1,6 +1,6 @@
 # @audio/decode [![test](https://github.com/audiojs/decode/actions/workflows/test.js.yml/badge.svg)](https://github.com/audiojs/decode/actions/workflows/test.js.yml)
 
-Try it in the browser: [Extract audio from video](https://audiojs.dev/util/extract-audio/), [Audio converter](https://audiojs.dev/util/convert-audio/). Runs on this package, nothing is uploaded.
+Try it in the browser: [Extract audio from video](https://audiojs.dev/util/extract-audio/), [Audio converter](https://audiojs.dev/util/convert-audio/).
 
 Decode any audio format to raw samples.<br>
 JS / WASM with no ffmpeg or native bindings; works in Node.js and browsers.<br>
