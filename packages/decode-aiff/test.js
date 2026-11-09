@@ -1,4 +1,5 @@
 import decode, { decoder } from './decode-aiff.js'
+import decodeGsm from '@audio/decode-gsm'
 import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
@@ -113,8 +114,7 @@ function buildAIFF({ sr = 44100, nCh = 1, bps = 16, samples }) {
 }
 
 /** Build AIFF-C buffer */
-function buildAIFC({ sr = 44100, nCh = 1, bps = 16, comp = 'NONE', samples, rawData }) {
-	let nFrames = rawData ? rawData.length / nCh / (bps / 8) : samples.length / nCh
+function buildAIFC({ sr = 44100, nCh = 1, bps = 16, comp = 'NONE', samples, rawData, nFrames = rawData ? rawData.length / nCh / (bps / 8) : samples.length / nCh }) {
 	let byteDepth = bps / 8
 	let dataSize = rawData ? rawData.length : nFrames * nCh * byteDepth
 	// COMM: 18 + 4 (compType) + 2 (pascal string: 1-byte len + 1 pad for "not compressed")
@@ -711,8 +711,19 @@ console.log('audacity: GSM 6.10')
 	let source = readFileSync(new URL('audacity/lena-gsm.aiff', import.meta.resolve('audio-lena')))
 	let r = decode(source)
 	ok(r.sampleRate === 44100, 'sampleRate 44100')
-	ok(near(r.channelData[0].length / r.sampleRate, 12.27, 0.1), 'duration ~12.27s')
-	ok(rms(r.channelData[0]) > 0.05, 'has audio (GSM)')
+	ok(r.channelData[0].length === 541184, 'COMM length: 541184 samples of 3383 blocks, as libsndfile')
+	// libgsm 1.0.22 on the SSND payload; FFmpeg decodes the file to the same samples
+	let s = source.indexOf('SSND'), ref = (await decodeGsm(source.subarray(s + 16, s + 8 + source.readUInt32BE(s + 4)))).channelData[0]
+	ok(r.channelData[0].every((v, i) => v === ref[i]), 'every sample as libgsm')
+
+	// random frames reach what speech does not: every xmaxc (48..55 rounds by 1), every grid, saturation
+	let seed = 1, rnd = () => (seed = Math.imul(seed, 1103515245) + 12345 >>> 0) >>> 24
+	let frames = Uint8Array.from({ length: 3000 * 33 }, (_, i) => i % 33 ? rnd() : 0xD0 | rnd() & 15)
+	let fuzz = decode(buildAIFC({ sr: 8000, comp: 'GSM ', rawData: frames, nFrames: 3000 * 160 })).channelData[0]
+	let fref = (await decodeGsm(frames)).channelData[0]
+	ok(fuzz.length === fref.length && fuzz.every((v, i) => v === fref[i]), '3000 random frames: every sample as libgsm')
+	ok(decode(buildAIFC({ sr: 8000, comp: 'GSM ', rawData: frames, nFrames: 3000 })).channelData[0].length === 3000 * 160, 'COMM as blocks, as Apple counts ima4: 160 samples each')
+
 	let { emitted, tail } = decodeChunked(source)
 	ok(emitted === 0, 'chunked GSM waits for flush')
 	let matches = tail.channelData[0].length === r.channelData[0].length && tail.channelData[0].every((sample, i) => sample === r.channelData[0][i])

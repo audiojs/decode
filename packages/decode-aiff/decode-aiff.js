@@ -292,8 +292,12 @@ function asr(x, n) {
 }
 
 function decodeGSM(b, ssndOff, ssndSize, nCh, nFrames, sr) {
-	let totalFrames = Math.min(nFrames, Math.floor(ssndSize / 33))
-	let channelData = [new Float32Array(totalFrames * 160)]
+	let blocks = Math.floor(Math.min(ssndSize, b.length - ssndOff) / 33)
+	// COMM counts samples (libsndfile, so Audacity), or blocks as Apple counts ima4
+	let len = nFrames > blocks ? Math.min(nFrames, blocks * 160) : nFrames * 160
+	let totalFrames = Math.ceil(len / 160)
+	// the last block's padding past len falls off the array (typed arrays drop out-of-range writes)
+	let channelData = [new Float32Array(len)]
 	let out = channelData[0], p = ssndOff
 
 	// Decoder state (mirrors struct gsm_state)
@@ -372,9 +376,9 @@ function decodeGSM(b, ssndOff, ssndSize, nCh, nFrames, sr) {
 	return { channelData, sampleRate: sr }
 }
 
-// GSM 6.10 bit unpacking: 33 bytes → LARc[8] + 4 subframes
+// GSM 6.10 bit unpacking: 33 bytes = 0xD signature nibble + 260 bits of LARc[8] and 4 subframes
 function gsmBits(buf, off) {
-	let bc = 0
+	let bc = 4
 	function r(n) {
 		let val = 0
 		for (let i = 0; i < n; i++) {
@@ -441,7 +445,7 @@ function gsmRpeDecode(xmaxc, Mc, xMc, erp) {
 	// 4.2.16: APCM inverse quantization
 	let fac = GSM_FAC[mant]
 	let shift = 6 - exp
-	let round = shift > 1 ? 1 << (shift - 1) : 0  // gsm_asl(1, shift-1)
+	let round = shift > 0 ? 1 << (shift - 1) : 0  // gsm_asl(1, shift-1)
 
 	let xMp = new Int32Array(13)
 	for (let i = 0; i < 13; i++) {
