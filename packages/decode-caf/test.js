@@ -1,4 +1,5 @@
 import decode, { decoder } from './decode-caf.js'
+import decodeAiff from '@audio/decode-aiff'
 import { readFileSync } from 'fs'
 
 let pass = 0, fail = 0
@@ -121,35 +122,27 @@ function buildCAFUnknownSize(opts) {
 	return normal
 }
 
-// A-law encoder (for test fixture generation)
-function alawEncode(linear) {
-	let pcm = Math.round(linear * 32768)
-	let sign = 0
-	if (pcm < 0) { sign = 0x80; pcm = -pcm }
-	if (pcm > 32767) pcm = 32767
-	let exp, mant
-	if (pcm < 256) { exp = 0; mant = pcm >> 4 }
-	else {
-		exp = 1
-		let tmp = pcm >> 5
-		while (tmp > 1 && exp < 7) { exp++; tmp >>= 1 }
-		mant = (pcm >> (exp + 3)) & 0x0F
-	}
-	return (sign | (exp << 4) | mant) ^ 0x55
+// G.711 reference levels, int16 per code: alaw2linear/ulaw2linear of FFmpeg's libavcodec/pcm_tablegen.h
+// (Sun's g711.c), which FFmpeg 8 and SoX 14.4 decode all 256 codes of both laws to
+function alaw2linear(a) {
+	a ^= 0x55
+	let t = a & 0x0F, seg = (a & 0x70) >> 4
+	t = seg ? (t + t + 1 + 32) << (seg + 2) : (t + t + 1) << 3
+	return (a & 0x80) ? t : -t
+}
+function ulaw2linear(u) {
+	u = ~u & 0xFF
+	let t = (((u & 0x0F) << 3) + 0x84) << ((u & 0x70) >> 4)
+	return (u & 0x80) ? 0x84 - t : t - 0x84
 }
 
-// mu-law encoder (for test fixture generation)
-function ulawEncode(linear) {
-	let pcm = Math.round(linear * 32768)
-	let sign = 0
-	if (pcm < 0) { sign = 0x80; pcm = -pcm }
-	if (pcm > 32635) pcm = 32635
-	pcm += 33
-	let exp = 0, tmp = pcm >> 6
-	while (tmp > 0 && exp < 7) { exp++; tmp >>= 1 }
-	let mant = (pcm >> (exp + 3)) & 0x0F
-	return ~(sign | (exp << 4) | mant) & 0xFF
+// Fixture encoders: the code of the nearest level (G.711's decision thresholds lie between levels)
+let nearest = (lin) => (x) => {
+	let v = x * 32768, best = 0
+	for (let c = 1; c < 256; c++) if (Math.abs(lin(c) - v) < Math.abs(lin(best) - v)) best = c
+	return best
 }
+let alawEncode = nearest(alaw2linear), ulawEncode = nearest(ulaw2linear)
 
 // Generate test tone
 function sineTone(freq, sr, dur, amp = 0.8) {
@@ -320,31 +313,37 @@ console.log('8-bit mono')
 // ---- A-law mono ----
 console.log('A-law mono')
 {
-	let caf = buildCAF({ sampleRate: 8000, formatID: 'alaw', formatFlags: 0, bitsPerChannel: 8, channelsPerFrame: 1, samples: [sineTone(440, 8000, 0.1)] })
+	let src = sineTone(440, 8000, 0.1)
+	let caf = buildCAF({ sampleRate: 8000, formatID: 'alaw', formatFlags: 0, bitsPerChannel: 8, channelsPerFrame: 1, samples: [src] })
 	let r = await decode(caf)
 	ok(r.channelData.length === 1, '1 channel')
 	ok(r.sampleRate === 8000, 'sampleRate 8000')
-	ok(r.channelData[0].length > 0, 'has samples')
-	// a-law encode/decode roundtrip has some loss, verify signal exists
-	let peak = 0
-	for (let s of r.channelData[0]) peak = Math.max(peak, Math.abs(s))
-	ok(peak > 0.1, 'has audio content')
+	ok(r.channelData[0].length === src.length, 'every sample')
+	// sign and scale against the source itself: the widest step under 0.8 is 1024 of 32768
+	ok(r.channelData[0].every((s, i) => Math.abs(s - src[i]) <= 512 / 32768), 'within half a step of the source')
 }
 
 // ---- mu-law stereo ----
 console.log('mu-law stereo')
 {
-	let caf = buildCAF({ sampleRate: 8000, formatID: 'ulaw', formatFlags: 0, bitsPerChannel: 8, channelsPerFrame: 2, samples: [sineTone(440, 8000, 0.1), sineTone(880, 8000, 0.1)] })
+	let src = [sineTone(440, 8000, 0.1), sineTone(880, 8000, 0.1)]
+	let caf = buildCAF({ sampleRate: 8000, formatID: 'ulaw', formatFlags: 0, bitsPerChannel: 8, channelsPerFrame: 2, samples: src })
 	let r = await decode(caf)
 	ok(r.channelData.length === 2, '2 channels')
 	ok(r.sampleRate === 8000, 'sampleRate 8000')
-	let peak = 0
-	for (let s of r.channelData[0]) peak = Math.max(peak, Math.abs(s))
-	ok(peak > 0.1, 'has audio content')
-	// channels differ
-	let diff = 0
-	for (let i = 0; i < 50; i++) diff += Math.abs(r.channelData[0][i] - r.channelData[1][i])
-	ok(diff > 0.01, 'L/R differ')
+	ok(r.channelData.every((ch, c) => ch.every((s, i) => Math.abs(s - src[c][i]) <= 512 / 32768)), 'each channel within half a step of its source')
+}
+
+// ---- G.711: every code ----
+console.log('G.711: all 256 codes')
+{
+	let codes = Uint8Array.from({ length: 256 }, (_, i) => i)
+	for (let [fmt, lin] of [['alaw', alaw2linear], ['ulaw', ulaw2linear]]) {
+		let caf = buildCAF({ sampleRate: 8000, formatID: fmt, formatFlags: 0, bitsPerChannel: 8, channelsPerFrame: 1, samples: [new Float32Array(256)] })
+		caf.set(codes, caf.length - 256) // the data chunk ends the file
+		let x = (await decode(caf)).channelData[0]
+		ok(x.length === 256 && x.every((v, c) => v === lin(c) / 32768), fmt + ': every code at its G.711 level, as FFmpeg and SoX')
+	}
 }
 
 // ---- data chunk with -1 size ----
@@ -574,9 +573,11 @@ console.log('real file: alaw')
 {
 	let caf = readFileSync(new URL('lena-alaw.caf', import.meta.resolve('audio-lena')))
 	let r = await decode(caf)
-	ok(r.channelData.length >= 1, 'has channels')
+	ok(r.channelData.length === 1, 'mono')
 	ok(r.sampleRate === 8000, 'sampleRate 8000')
-	ok(rms(r.channelData[0]) > 0.01, 'has audio content')
+	// the same A-law codes as lena-alaw.aiff: afconvert and FFmpeg decode both files to identical samples
+	let aiff = decodeAiff(readFileSync(new URL('lena-alaw.aiff', import.meta.resolve('audio-lena')))).channelData[0]
+	ok(r.channelData[0].length === 98174 && r.channelData[0].every((s, i) => s === aiff[i]), 'every sample as lena-alaw.aiff')
 }
 
 // ---- Performance (real file) ----

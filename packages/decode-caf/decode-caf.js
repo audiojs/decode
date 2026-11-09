@@ -12,6 +12,21 @@ const FORMATS = new Set(['lpcm', 'alaw', 'ulaw', 'ima4'])
 const IMA_STEP = new Int16Array([7,8,9,10,11,12,13,14,16,17,19,21,23,25,28,31,34,37,41,45,50,55,60,66,73,80,88,97,107,118,130,143,157,173,190,209,230,253,279,307,337,371,408,449,494,544,598,658,724,796,876,963,1060,1166,1282,1411,1552,1707,1878,2066,2272,2499,2749,3024,3327,3660,4026,4428,4871,5358,5894,6484,7132,7845,8630,9493,10442,11487,12635,13899,15289,16818,18500,20350,22385,24623,27086,29794,32767])
 const IMA_IDX = new Int8Array([-1,-1,-1,-1,2,4,6,8,-1,-1,-1,-1,2,4,6,8])
 
+// G.711 expansion tables (ITU-T), as decode-aiff and decode-wav: int16 PCM per encoded byte
+const ALAW_TBL = new Int16Array(256)
+const ULAW_TBL = new Int16Array(256)
+for (let i = 0; i < 256; i++) {
+	let ax = i ^ 0x55, seg = (ax >> 4) & 7, val = ((ax & 0x0F) << 4) + 8
+	if (seg) val = (val + 256) << (seg - 1)
+	ALAW_TBL[i] = (ax & 0x80) ? val : -val
+
+	let ux = ~i & 0xFF
+	seg = (ux >> 4) & 7
+	val = ((ux & 0x0F) << 3) + 132
+	val <<= seg
+	ULAW_TBL[i] = (ux & 0x80) ? (132 - val) : (val - 132)
+}
+
 /** Decode a complete CAF file synchronously. */
 export default function decode(src) {
 	let dec = decoder()
@@ -107,8 +122,8 @@ function decodeCafRaw(raw, hdr) {
 	if (!frames) return EMPTY
 	let samples
 	if (formatID === 'lpcm') samples = decodeLPCM(raw, formatFlags, bits, ch)
-	else if (formatID === 'alaw') samples = decodeAlaw(raw, ch)
-	else if (formatID === 'ulaw') samples = decodeUlaw(raw, ch)
+	else if (formatID === 'alaw') samples = decodeLaw(raw, ch, ALAW_TBL)
+	else if (formatID === 'ulaw') samples = decodeLaw(raw, ch, ULAW_TBL)
 	else if (formatID === 'ima4') samples = decodeIma4(raw, hdr)
 	else throw Error('CAF: unsupported format ' + formatID)
 	return { channelData: samples, sampleRate }
@@ -206,36 +221,12 @@ function decodeLPCM(data, flags, bits, ch) {
 	return channelData
 }
 
-function alawDecode(val) {
-	val ^= 0x55
-	let sign = val & 0x80, seg = (val >> 4) & 7, quant = val & 0x0F
-	let sample = seg ? ((quant << 1) | 0x21) << (seg - 1) : (quant << 1) | 1
-	return (sign ? -sample : sample) / 32768
-}
-
-function ulawDecode(val) {
-	val = ~val & 0xFF
-	let sign = val & 0x80, exp = (val >> 4) & 7, mant = val & 0x0F
-	let sample = ((mant << 1) | 0x21) << exp
-	return (sign ? -(sample - 33) : (sample - 33)) / 32768
-}
-
-function decodeAlaw(data, ch) {
+function decodeLaw(data, ch, tbl) {
 	let framesCount = (data.length / ch) | 0
 	if (!framesCount) return []
 	let channelData = Array.from({ length: ch }, () => new Float32Array(framesCount))
 	for (let i = 0, off = 0; i < framesCount; i++)
 		for (let c = 0; c < ch; c++, off++)
-			channelData[c][i] = alawDecode(data[off])
-	return channelData
-}
-
-function decodeUlaw(data, ch) {
-	let framesCount = (data.length / ch) | 0
-	if (!framesCount) return []
-	let channelData = Array.from({ length: ch }, () => new Float32Array(framesCount))
-	for (let i = 0, off = 0; i < framesCount; i++)
-		for (let c = 0; c < ch; c++, off++)
-			channelData[c][i] = ulawDecode(data[off])
+			channelData[c][i] = tbl[data[off]] / 32768
 	return channelData
 }
