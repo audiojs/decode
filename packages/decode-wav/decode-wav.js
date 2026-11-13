@@ -153,6 +153,8 @@ function decodeRaw(raw, hdr) {
 	} else if (bitDepth === 8) {
 		let t = U8_TBL ??= scale(256, u => u - 128, 128)
 		for (let c = 0; c < nCh; c++) for (let x = ch[c], i = 0, k = c; i < frames; i++, k += nCh) x[i] = t[raw[k]]
+	} else if ((bitDepth === 16 || bitDepth === 24 || bitDepth === 32) && pcm(raw, ch, frames, nCh, bitDepth / 8)) {
+		// decoded by the kernel, where it runs: the loops' bits
 	} else if (bitDepth === 16) {
 		let s = samples(raw, Uint16Array, n), t = S16_TBL ??= scale(65536, u => u << 16 >> 16, 32768)
 		for (let c = 0; c < nCh; c++) for (let x = ch[c], i = 0, k = c; i < frames; i++, k += nCh) x[i] = t[s[k]]
@@ -180,15 +182,51 @@ function scale(n, signed, full) {
 const LE = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1
 
 /** The first n little-endian samples of raw as a native typed array: an aligned copy when raw's
- *  offset isn't a multiple of the sample size, byte-swapped on a big-endian host. */
+ *  offset isn't a multiple of the sample size (Uint8Array's slice: a Buffer's is a view), byte-swapped
+ *  on a big-endian host. */
 function samples(raw, T, n) {
 	let w = T.BYTES_PER_ELEMENT, len = n * w
 	if (!LE) {
 		let b = new Uint8Array(len)
 		for (let i = 0; i < len; i += w) for (let j = 0; j < w; j++) b[i + j] = raw[i + w - 1 - j]
 		raw = b
-	} else if (raw.byteOffset % w) raw = raw.slice(0, len)
+	} else if (raw.byteOffset % w) raw = Uint8Array.prototype.slice.call(raw, 0, len)
 	return new T(raw.buffer, raw.byteOffset, n)
+}
+
+// pcm.wat, compiled by wat2wasm (457 bytes): 16, 24, 32-bit integer PCM to float32 channels, as the loops
+// above divide it, bit for bit; 16-bit mono and stereo eight samples a step (WebAssembly SIMD)
+const WASM = new Uint8Array([
+	0,97,115,109,1,0,0,0,1,9,1,96,5,127,127,127,127,127,0,3,2,1,0,5,3,1,0,1,7,16,2,6,109,101,109,111,114,121,2,0,3,112,99,
+	109,0,0,10,152,3,1,149,3,3,5,127,2,123,1,125,32,1,65,2,116,33,9,253,12,0,0,0,56,0,0,0,56,0,0,0,56,0,0,0,56,33,11,32,4,
+	65,2,70,4,64,32,2,65,2,70,4,64,32,1,65,124,113,33,7,2,64,3,64,32,5,32,7,79,13,1,32,0,253,0,4,0,32,10,253,13,0,1,4,5,8,
+	9,12,13,2,3,6,7,10,11,14,15,33,10,32,3,32,10,253,167,1,253,250,1,32,11,253,230,1,253,11,4,0,32,3,32,9,106,32,10,253,
+	168,1,253,250,1,32,11,253,230,1,253,11,4,0,32,0,65,16,106,33,0,32,3,65,16,106,33,3,32,5,65,4,106,33,5,12,0,11,11,11,
+	32,2,65,1,70,4,64,32,1,65,120,113,33,7,2,64,3,64,32,5,32,7,79,13,1,32,0,253,0,4,0,33,10,32,3,32,10,253,167,1,253,250,
+	1,32,11,253,230,1,253,11,4,0,32,3,32,10,253,168,1,253,250,1,32,11,253,230,1,253,11,4,16,32,0,65,16,106,33,0,32,3,65,
+	32,106,33,3,32,5,65,8,106,33,5,12,0,11,11,11,11,67,0,0,0,56,67,0,0,0,52,67,0,0,0,48,32,4,65,3,70,27,32,4,65,2,70,27,
+	33,12,2,64,3,64,32,5,32,1,79,13,1,65,0,33,6,32,3,33,8,3,64,32,8,32,12,32,4,65,2,70,4,127,32,0,46,1,0,5,32,4,65,3,70,4,
+	127,32,0,40,2,0,65,8,116,65,8,117,5,32,0,40,2,0,11,11,178,148,56,2,0,32,0,32,4,106,33,0,32,8,32,9,106,33,8,32,6,65,1,
+	106,33,6,32,6,32,2,73,13,0,11,32,3,65,4,106,33,3,32,5,65,1,106,33,5,12,0,11,11,11
+])
+
+/** Integer PCM of `bytes` a sample decoded into the channels `ch` by the kernel, a run of frames at a time
+ *  through its memory; false where WebAssembly SIMD does not run (the loops decode it then) */
+let simd
+const RUN = 1 << 16
+function pcm(raw, ch, frames, nCh, bytes) {
+	if (simd === undefined) try { simd = new WebAssembly.Instance(new WebAssembly.Module(WASM)).exports } catch { simd = null }
+	if (!simd) return false
+	let { memory } = simd, run = Math.min(frames, RUN), y = (run * nCh * bytes + 19) & ~15, need = y + run * nCh * 4
+	if (need > memory.buffer.byteLength) memory.grow(Math.ceil((need - memory.buffer.byteLength) / 65536))
+	let u8 = new Uint8Array(memory.buffer), f32 = new Float32Array(memory.buffer)
+	for (let i = 0; i < frames; i += run) {
+		let m = Math.min(run, frames - i), fb = nCh * bytes
+		u8.set(raw.subarray(i * fb, (i + m) * fb))
+		simd.pcm(0, m, nCh, y, bytes)
+		for (let c = 0; c < nCh; c++) ch[c].set(f32.subarray(y / 4 + c * m, y / 4 + (c + 1) * m), i)
+	}
+	return true
 }
 
 // IMA/DVI ADPCM — per channel: 4-byte header (predictor int16 + step index), then

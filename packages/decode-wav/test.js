@@ -353,5 +353,29 @@ for (let name of ['ima_mono', 'ms_mono', 'ima_stereo', 'ms_stereo']) {
 	ok(threw, 'error: rejects unsupported format')
 }
 
+// ===== integer PCM: every 16-bit code, the 24 and 32-bit extremes, any channel count, in a Buffer off its alignment =====
+
+{
+	// a code's value: code / 2^(bits-1), whichever way it is decoded (the kernel or the loops)
+	let n = 65536, wav = buildWav({ ch: 2, bitDepth: 16, samples: new Array(2 * n).fill(0) }), dv = new DataView(wav.buffer, 44)
+	for (let i = 0; i < 2 * n; i++) dv.setUint16(i * 2, i % 2 ? 65535 - (i >> 1) : i >> 1, true)
+	let [l, r] = (await decode(wav)).channelData
+	ok(l.every((v, i) => v === (i << 16 >> 16) / 32768) && r.every((v, i) => v === ((65535 - i) << 16 >> 16) / 32768), '16-bit: every code, both channels')
+	for (let [bits, codes] of [[24, [0x800000, 0x7fffff, 1, 0xffffff, 0]], [32, [0x80000000, 0x7fffffff, 1, 0xffffffff, 0, 0x40000041]]]) for (let ch of [1, 2, 3]) {
+		let m = codes.length * 7, w = buildWav({ ch, bitDepth: bits, samples: new Array(m * ch).fill(0) }), d = new DataView(w.buffer, 44), bps = bits / 8
+		for (let i = 0; i < m * ch; i++) { let c = codes[i % codes.length]; for (let j = 0; j < bps; j++) d.setUint8(i * bps + j, c >>> 8 * j & 255) }
+		let got = (await decode(w)).channelData, want = i => { let c = codes[i % codes.length]; return (bits === 24 ? c << 8 >> 8 : c | 0) / 2 ** (bits - 1) }
+		ok(got.length === ch && got.every((x, c) => x.every((v, f) => v === Math.fround(want(f * ch + c)))), `${bits}-bit, ${ch} channels: the extremes`)
+	}
+	// its data at an odd offset in a Node Buffer: decoded, not thrown (a Buffer's slice is a view, no aligned copy)
+	let w32 = buildWav({ ch: 2, bitDepth: 32, samples: sine(64) }), at = Buffer.alloc(w32.length + 1)
+	at.set(w32, 1)
+	let r32 = await decode(at.subarray(1)), ref = await decode(w32)
+	ok(r32.channelData.every((x, c) => x.every((v, i) => v === ref.channelData[c][i])), '32-bit: a Buffer off its alignment')
+	let f64 = buildWav({ bitDepth: 64, float: true, samples: sine(64) }), b64 = Buffer.alloc(f64.length + 4)
+	b64.set(f64, 4)
+	ok((await decode(b64.subarray(4))).channelData[0].every((v, i) => v === Math.fround(sine(64)[i])), '64-bit float: a Buffer off its alignment')
+}
+
 console.log(`\n${pass + fail} tests: ${pass} passed, ${fail} failed`)
 if (fail) process.exit(1)
