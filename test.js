@@ -993,3 +993,21 @@ t('gsm: raw frames by name, as the package decodes them, chunked or whole', asyn
 	let r = await (async () => { let out = []; for await (let pcm of decode(new Blob([bytes]).stream(), 'gsm')) out.push(pcm); return out })()
 	is(r.reduce((s, p) => s + p.channelData[0].length, 0), 16000, "decode(stream, 'gsm'): 2 s at 8 kHz")
 })
+
+// A package a shipped file imports is a dependency. Every member is a workspace here, so an import resolves in this
+// repository whether package.json declares it or not; an undeclared one fails only where the package is installed
+t('every package a shipped file imports is a declared dependency', async () => {
+	if (!isNode) return skip('node only')
+	const { readFileSync, readdirSync, statSync } = await import('fs'), { isBuiltin } = await import('module')
+	const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8'))
+	const declared = new Set(Object.keys({ ...pkg.dependencies, ...pkg.peerDependencies, ...pkg.optionalDependencies }))
+	const list = f => statSync(new URL('./' + f, import.meta.url)).isDirectory() ? readdirSync(new URL('./' + f, import.meta.url)).flatMap(n => list(f.replace(/\/?$/, '/') + n)) : f.endsWith('.js') ? [f] : []
+	const missing = new Set()
+	// what a comment shows (an example's import) is no import
+	const code = f => readFileSync(new URL('./' + f, import.meta.url), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '')
+	for (const f of pkg.files.flatMap(list)) for (const [, spec] of code(f).matchAll(/(?:\bfrom\s*|\bimport\s*\(?\s*)['"]([^'"]+)['"]/g)) {
+		const name = spec.split('/').slice(0, spec.startsWith('@') ? 2 : 1).join('/')
+		if (!spec.startsWith('.') && !isBuiltin(spec) && name !== pkg.name && !declared.has(name)) missing.add(f + ': ' + name)
+	}
+	is([...missing], [], 'none undeclared')
+})
