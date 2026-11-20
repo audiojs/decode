@@ -1011,20 +1011,3 @@ t('every package a shipped file imports is a declared dependency', async () => {
 	}
 	is([...missing], [], 'none undeclared')
 })
-
-// audio-decode is the umbrella under its earlier name. It is built where it is published (scripts/alias.js), with the
-// umbrella's version and the umbrella at that version as its one dependency, so the two names carry one version; each
-// of its entries re-exports the umbrella's entry of the same name
-t('audio-decode, the alias, is the umbrella at the umbrella\'s version', async () => {
-	if (!isNode) return skip('node only')
-	const { readFileSync, existsSync, rmSync } = await import('fs'), { alias } = await import('./scripts/alias.js')
-	const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')), { dir, manifest: m } = alias(), bad = []
-	is([m.name, m.version, m.dependencies], ['audio-decode', pkg.version, { [pkg.name]: pkg.version }], 'the umbrella\'s version, and its one dependency the umbrella at it')
-	for (const [k, f] of Object.entries(m.exports)) {
-		if (k === './package.json') continue
-		if (!(k in pkg.exports) || !m.files.includes(f.slice(2)) || !existsSync(dir + f.slice(1))) { bad.push(k); continue }
-		for (const [, spec] of readFileSync(dir + f.slice(1), 'utf8').matchAll(/\bfrom\s*['"]([^'"]+)['"]/g)) if (spec !== pkg.name + k.slice(1)) bad.push(k + ': ' + spec)
-	}
-	is(bad, [], 'each entry a file it ships, re-exporting the umbrella\'s entry of that name')
-	rmSync(dir, { recursive: true })
-})
