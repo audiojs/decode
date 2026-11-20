@@ -14,6 +14,8 @@ import decode from '@audio/decode';
 const { channelData, sampleRate } = await decode(anyAudioBuffer);
 ```
 
+`audio-decode` is its earlier name, kept as an alias: the same code at the same version. What changed in each version: [releases](https://github.com/audiojs/decode/releases).
+
 #### Supported formats
 
 | Format | Package | Size | Engine |

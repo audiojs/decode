@@ -30,7 +30,7 @@
     }
   },
   "workspaces": [
-    "packages/*"
+    "packages/decode-*"
   ],
   "dependencies": {
     "@audio/decode-aac": "^1.6.0",
@@ -70,9 +70,10 @@
     "test": "node test.js",
     "test:browser": "node test.browser.js",
     "test:all": "node test.js && node test.browser.js",
-    "publish:all": "for d in packages/* .; do [ -f \"$d/package.json\" ] || continue; id=$(node -p \"require('./'+'$d'+'/package.json').name+'@'+require('./'+'$d'+'/package.json').version\"); npm view \"$id\" version >/dev/null 2>&1 && echo \"skip $id\" || (cd \"$d\" && npm publish); done",
+    "publish:all": "for d in packages/decode-* .; do [ -f \"$d/package.json\" ] || continue; id=$(node -p \"require('./'+'$d'+'/package.json').name+'@'+require('./'+'$d'+'/package.json').version\"); npm view \"$id\" version >/dev/null 2>&1 && echo \"skip $id\" || (cd \"$d\" && npm publish); done",
     "members": "node scripts/members.js",
-    "prepublishOnly": "node scripts/members.js --check"
+    "prepublishOnly": "node scripts/members.js --check",
+    "postpublish": "node scripts/alias.js"
   },
   "repository": {
     "type": "git",
