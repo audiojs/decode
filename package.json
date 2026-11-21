@@ -1,6 +1,6 @@
 {
   "name": "@audio/decode",
-  "version": "4.3.1",
+  "version": "4.4.0",
   "description": "Decode audio data in node or browser",
   "type": "module",
   "sideEffects": false,
@@ -13,7 +13,8 @@
     "stream.d.ts",
     "meta.js",
     "test.html",
-    "members/"
+    "audio.js",
+    "audio.d.ts"
   ],
   "exports": {
     ".": {
@@ -23,11 +24,11 @@
     },
     "./stream": "./stream.js",
     "./meta": "./meta.js",
-    "./package.json": "./package.json",
-    "./*": {
-      "types": "./members/*.d.ts",
-      "default": "./members/*.js"
-    }
+    "./audio": {
+      "types": "./audio.d.ts",
+      "default": "./audio.js"
+    },
+    "./package.json": "./package.json"
   },
   "workspaces": [
     "packages/*"
@@ -70,9 +71,7 @@
     "test": "node test.js",
     "test:browser": "node test.browser.js",
     "test:all": "node test.js && node test.browser.js",
-    "publish:all": "for d in packages/* .; do [ -f \"$d/package.json\" ] || continue; id=$(node -p \"require('./'+'$d'+'/package.json').name+'@'+require('./'+'$d'+'/package.json').version\"); npm view \"$id\" version >/dev/null 2>&1 && echo \"skip $id\" || (cd \"$d\" && npm publish); done",
-    "members": "node scripts/members.js",
-    "prepublishOnly": "node scripts/members.js --check"
+    "publish:all": "for d in packages/* .; do [ -f \"$d/package.json\" ] || continue; id=$(node -p \"require('./'+'$d'+'/package.json').name+'@'+require('./'+'$d'+'/package.json').version\"); npm view \"$id\" version >/dev/null 2>&1 && echo \"skip $id\" || (cd \"$d\" && npm publish); done"
   },
   "repository": {
     "type": "git",
